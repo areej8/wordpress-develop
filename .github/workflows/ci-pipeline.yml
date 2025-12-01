@@ -31,18 +31,20 @@ jobs:
         echo "Event: ${{ github.event_name }}"
         echo ""
         echo "📁 WordPress Structure:"
-        echo "src/index.php exists: $( [ -f "src/index.php" ] && echo '✅ YES' || echo '❌ NO' )"
-        echo "src/wp-admin exists: $( [ -d "src/wp-admin" ] && echo '✅ YES' || echo '❌ NO' )"
-        echo "src/wp-includes exists: $( [ -d "src/wp-includes" ] && echo '✅ YES' || echo '❌ NO' )"
-        echo "src/wp-content exists: $( [ -d "src/wp-content" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "Root wp-config-sample.php: $( [ -f "wp-config-sample.php" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "src/index.php: $( [ -f "src/index.php" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "src/wp-admin: $( [ -d "src/wp-admin" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "src/wp-includes: $( [ -d "src/wp-includes" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "src/wp-content: $( [ -d "src/wp-content" ] && echo '✅ YES' || echo '❌ NO' )"
     
     - name: Validate essential files
       run: |
         echo "🔍 Validating essential WordPress files..."
         
+        # WordPress development repo has wp-config-sample.php at ROOT, not in src/
         ESSENTIAL_FILES=(
+          "wp-config-sample.php"     # At ROOT level
           "src/index.php"
-          "src/wp-config-sample.php"
           "src/wp-load.php"
           "src/wp-settings.php"
           "src/license.txt"
@@ -74,7 +76,7 @@ jobs:
         # Check a few key files
         KEY_FILES=(
           "src/index.php"
-          "src/wp-config-sample.php"
+          "wp-config-sample.php"  # Root level
           "src/wp-load.php"
           "src/wp-settings.php"
         )
@@ -116,10 +118,13 @@ jobs:
         # Create build directory
         mkdir -p "$BUILD_NAME"
         
-        echo "Copying WordPress files from src/ to build..."
+        echo "Copying WordPress files..."
+        # Copy src/ content (WordPress core)
         cp -r src/* "$BUILD_NAME"/
+        # Copy config sample from root
+        cp wp-config-sample.php "$BUILD_NAME"/
         
-        # Create build info file (FIXED: No nested HEREDOC)
+        # Create build info file
         echo "WordPress Build Information" > "$BUILD_NAME/BUILD-INFO.txt"
         echo "===========================" >> "$BUILD_NAME/BUILD-INFO.txt"
         echo "Build Date: $(date)" >> "$BUILD_NAME/BUILD-INFO.txt"
@@ -135,11 +140,12 @@ jobs:
         echo "- wp-admin/: $([ -d "$BUILD_NAME/wp-admin" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
         echo "- wp-includes/: $([ -d "$BUILD_NAME/wp-includes" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
         echo "- wp-content/: $([ -d "$BUILD_NAME/wp-content" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "- wp-config-sample.php: $([ -f "$BUILD_NAME/wp-config-sample.php" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
         
         # Show build contents
         echo ""
         echo "📁 Build contents ($BUILD_NAME):"
-        ls -la "$BUILD_NAME/"
+        ls -la "$BUILD_NAME/" | head -20
         echo ""
         echo "📊 Build statistics:"
         echo "Total files: $(find "$BUILD_NAME" -type f | wc -l)"
@@ -413,4 +419,3 @@ jobs:
         echo "✅ Security headers set"
         echo ""
         echo "🎉 WORDPRESS IS NOW LIVE IN PRODUCTION!"
-
