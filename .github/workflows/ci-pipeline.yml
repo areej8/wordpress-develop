@@ -30,12 +30,11 @@ jobs:
         echo "Commit: $(git rev-parse --short HEAD)"
         echo "Event: ${{ github.event_name }}"
         echo ""
-        
         echo "📁 WordPress Structure:"
-        echo "src/index.php exists: $( [ -f "src/index.php" ] && echo "✅ YES" || echo "❌ NO" )"
-        echo "src/wp-admin exists: $( [ -d "src/wp-admin" ] && echo "✅ YES" || echo "❌ NO" )"
-        echo "src/wp-includes exists: $( [ -d "src/wp-includes" ] && echo "✅ YES" || echo "❌ NO" )"
-        echo "src/wp-content exists: $( [ -d "src/wp-content" ] && echo "✅ YES" || echo "❌ NO" )"
+        echo "src/index.php exists: $( [ -f "src/index.php" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "src/wp-admin exists: $( [ -d "src/wp-admin" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "src/wp-includes exists: $( [ -d "src/wp-includes" ] && echo '✅ YES' || echo '❌ NO' )"
+        echo "src/wp-content exists: $( [ -d "src/wp-content" ] && echo '✅ YES' || echo '❌ NO' )"
     
     - name: Validate essential files
       run: |
@@ -120,24 +119,22 @@ jobs:
         echo "Copying WordPress files from src/ to build..."
         cp -r src/* "$BUILD_NAME"/
         
-        # Create build info file
-        cat > "$BUILD_NAME/BUILD-INFO.txt" << EOL
-WordPress Build Information
-===========================
-Build Date: $(date)
-Source: WordPress Development Repository
-Branch: $(git branch --show-current)
-Commit: $(git rev-parse --short HEAD)
-PHP Version: $(php --version | head -1)
-Total Files: $(find "$BUILD_NAME" -type f | wc -l)
-Total Size: $(du -sh "$BUILD_NAME" | cut -f1)
-===========================
-Essential Files Check:
-- index.php: $( [ -f "$BUILD_NAME/index.php" ] && echo "✅ Present" || echo "❌ Missing" )
-- wp-admin/: $( [ -d "$BUILD_NAME/wp-admin" ] && echo "✅ Present" || echo "❌ Missing" )
-- wp-includes/: $( [ -d "$BUILD_NAME/wp-includes" ] && echo "✅ Present" || echo "❌ Missing" )
-- wp-content/: $( [ -d "$BUILD_NAME/wp-content" ] && echo "✅ Present" || echo "❌ Missing" )
-EOL
+        # Create build info file (FIXED: No nested HEREDOC)
+        echo "WordPress Build Information" > "$BUILD_NAME/BUILD-INFO.txt"
+        echo "===========================" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "Build Date: $(date)" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "Source: WordPress Development Repository" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "Branch: $(git branch --show-current)" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "Commit: $(git rev-parse --short HEAD)" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "PHP Version: $(php --version | head -1)" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "Total Files: $(find "$BUILD_NAME" -type f | wc -l)" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "Total Size: $(du -sh "$BUILD_NAME" | cut -f1)" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "===========================" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "Essential Files Check:" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "- index.php: $([ -f "$BUILD_NAME/index.php" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "- wp-admin/: $([ -d "$BUILD_NAME/wp-admin" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "- wp-includes/: $([ -d "$BUILD_NAME/wp-includes" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
+        echo "- wp-content/: $([ -d "$BUILD_NAME/wp-content" ] && echo '✅ Present' || echo '❌ Missing')" >> "$BUILD_NAME/BUILD-INFO.txt"
         
         # Show build contents
         echo ""
@@ -416,3 +413,4 @@ EOL
         echo "✅ Security headers set"
         echo ""
         echo "🎉 WORDPRESS IS NOW LIVE IN PRODUCTION!"
+
