@@ -10,7 +10,6 @@ jobs:
   cypress-docker:
     name: Cypress with Docker Compose
     runs-on: ubuntu-latest
-    needs: phpunit-tests
     continue-on-error: true
 
     steps:
