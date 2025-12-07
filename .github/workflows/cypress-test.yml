@@ -1,4 +1,4 @@
-name: WordPress CI/CD
+name: CI/CD with Docker Compose
 
 on:
   push:
@@ -7,186 +7,136 @@ on:
     branches: [ "trunk" ]
 
 jobs:
-  cypress-tests:
-    name: Cypress E2E Tests
+  phpunit-tests:
+    # ... same as above
+
+  cypress-docker:
+    name: Cypress with Docker Compose
     runs-on: ubuntu-latest
+    needs: phpunit-tests
     continue-on-error: true
-    
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: wordpress_cypress
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
 
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mysqli, mbstring, xml, gd, imagick
-          coverage: none
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.10.0
-      
-      - name: Cache Cypress binary
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/Cypress
-          key: ${{ runner.os }}-cypress-${{ hashFiles('tests/cypress/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-cypress-
-      
-      - name: Install Composer dependencies
-        run: composer install --no-interaction
-      
-      - name: Install Cypress dependencies
+      - name: Setup Docker Compose
         run: |
-          cd tests/cypress
-          npm install
+          docker compose version
       
-      - name: Setup WordPress environment
+      - name: Create docker-compose.yml
         run: |
-          if [ -d "src" ]; then
-            echo "📁 WordPress core found in src directory"
-            echo "WORDPRESS_DIR=src" >> $GITHUB_ENV
-          else
-            echo "📁 WordPress core in root directory"
-            echo "WORDPRESS_DIR=." >> $GITHUB_ENV
-          fi
-      
-      - name: Create wp-config.php for CI
-        run: |
-          # Check if wp-config.php already exists in root
-          if [ -f wp-config.php ]; then
-            echo "📝 Updating existing wp-config.php for CI environment"
-            cp wp-config.php wp-config.php.backup
-            # Replace mysql with 127.0.0.1:3306 for GitHub Actions
-            sed -i "s/define( 'DB_HOST', 'mysql' );/define( 'DB_HOST', '127.0.0.1:3306' );/" wp-config.php
-            # Update database name if needed
-            sed -i "s/define( 'DB_NAME', 'wordpress_develop' );/define( 'DB_NAME', 'wordpress_cypress' );/" wp-config.php
-            echo "✅ wp-config.php updated for CI"
-          else
-            echo "❌ wp-config.php not found in root"
-            exit 1
-          fi
+          cat > docker-compose.yml << 'EOF'
+          version: '3.8'
           
-          # Display the database configuration for verification
-          echo "🔍 Database configuration:"
-          grep "define( 'DB_" wp-config.php
+          services:
+            mysql:
+              image: mysql:8.0
+              environment:
+                MYSQL_ROOT_PASSWORD: password
+                MYSQL_DATABASE: wordpress_cypress
+              ports:
+                - "3306:3306"
+              healthcheck:
+                test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+                timeout: 20s
+                retries: 10
+              
+            wordpress:
+              build: .
+              depends_on:
+                mysql:
+                  condition: service_healthy
+              ports:
+                - "8889:80"
+              environment:
+                WORDPRESS_DB_HOST: mysql
+                WORDPRESS_DB_USER: root
+                WORDPRESS_DB_PASSWORD: password
+                WORDPRESS_DB_NAME: wordpress_cypress
+                WORDPRESS_DEBUG: 1
+              volumes:
+                - ./:/var/www/html
+                - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+          
+            cypress:
+              image: cypress/included:12.0.0
+              depends_on:
+                - wordpress
+              working_dir: /e2e
+              volumes:
+                - ./tests/cypress:/e2e
+                - ./tests/cypress/screenshots:/e2e/screenshots
+                - ./tests/cypress/videos:/e2e/videos
+              environment:
+                CYPRESS_BASE_URL: http://wordpress:80
+                CYPRESS_WP_USERNAME: admin
+                CYPRESS_WP_PASSWORD: password
+              command: |
+                bash -c "
+                echo 'Waiting for WordPress to be ready...'
+                while ! curl -s http://wordpress:80 > /dev/null; do sleep 2; done
+                echo 'Running Cypress tests...'
+                npx cypress run
+                "
+          EOF
+          
+          cat > Dockerfile << 'EOF'
+          FROM wordpress:php8.2-apache
+          
+          # Install dependencies and build WordPress
+          RUN apt-get update && apt-get install -y \
+              nodejs npm git curl \
+              && rm -rf /var/lib/apt/lists/*
+          
+          WORKDIR /var/www/html
+          
+          # Copy WordPress files
+          COPY . .
+          
+          # Install and build WordPress
+          RUN npm install && npm run build:dev
+          
+          # Set permissions
+          RUN chown -R www-data:www-data /var/www/html
+          EOF
       
-      - name: Verify database connection
+      - name: Build and start Docker environment
         run: |
-          echo "🔍 Testing database connection..."
-          mysql -h 127.0.0.1 -P 3306 -u root -ppassword -e "SHOW DATABASES;" || echo "⚠️ Direct MySQL connection failed"
-          mysql -h 127.0.0.1 -P 3306 -u root -ppassword wordpress_cypress -e "SELECT 1;" || echo "⚠️ Database wordpress_cypress not accessible yet"
+          docker compose up -d
+          docker compose ps
+          sleep 30  # Wait for services to start
       
-      - name: Install WP-CLI
+      - name: Install WordPress via WP-CLI
         run: |
-          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-          chmod +x wp-cli.phar
-          sudo mv wp-cli.phar /usr/local/bin/wp
-      
-      - name: Start PHP built-in server
-        run: |
-          echo "🚀 Starting PHP server from root directory"
-          php -S localhost:8889 -t . > /tmp/php-server.log 2>&1 &
-          echo $! > /tmp/php-server.pid
-          sleep 5
-      
-      - name: Wait for server to be ready
-        run: |
-          for i in {1..30}; do
-            if curl -s -f http://localhost:8889 > /dev/null 2>&1; then
-              echo "✅ Server is ready"
-              break
-            fi
-            echo "⏳ Waiting for server... attempt $i/30"
-            sleep 2
-          done
-      
-      - name: Install WordPress
-        run: |
-          wp core install \
+          docker compose exec -T wordpress wp core install \
             --url=http://localhost:8889 \
-            --title="WordPress Cypress Tests" \
+            --title="Test Site" \
             --admin_user=admin \
             --admin_password=password \
             --admin_email=admin@example.com \
-            --skip-email \
-            --allow-root
-      
-      - name: Configure WordPress
-        run: |
-          wp rewrite structure '/%postname%/' --allow-root
-          wp rewrite flush --allow-root
-          wp option update blogdescription "Automated Testing Environment" --allow-root
-      
-      - name: Verify WordPress installation
-        run: |
-          echo "🔍 Checking WordPress installation..."
-          curl -I http://localhost:8889
-          wp core version --allow-root
-          wp db check --allow-root
+            --skip-email
       
       - name: Run Cypress tests
-        id: cypress_tests
-        continue-on-error: true
-        run: npx cypress run --config-file tests/cypress/cypress.config.js
-        env:
-          CYPRESS_BASE_URL: http://localhost:8889
+        run: |
+          docker compose logs cypress
       
-      - name: Generate test report
+      - name: Get test results
         if: always()
         run: |
-          echo "## 🧪 Cypress E2E Test Results" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.cypress_tests.outcome }}" == "success" ]; then
-            echo "✅ **Status**: All tests passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Status**: Some tests failed (non-blocking)" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📊 Check artifacts for detailed results" >> $GITHUB_STEP_SUMMARY
+          docker compose logs cypress > cypress.log
+          cat cypress.log
       
-      - name: Upload Cypress screenshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-screenshots
-          path: tests/cypress/screenshots/
-          if-no-files-found: ignore
-      
-      - name: Upload Cypress videos
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cypress-videos
-          path: tests/cypress/videos/
-          if-no-files-found: ignore
+          name: cypress-results
+          path: |
+            tests/cypress/screenshots
+            tests/cypress/videos
+            cypress.log
       
-      - name: Upload PHP server logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: php-server-logs
-          path: /tmp/php-server.log
-          if-no-files-found: ignore
-      
-      - name: Stop PHP server
+      - name: Stop Docker environment
         if: always()
         run: |
-          if [ -f /tmp/php-server.pid ]; then
-            kill $(cat /tmp/php-server.pid) || true
-          fi
+          docker compose down -v
