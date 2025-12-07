@@ -8,30 +8,9 @@ on:
 
 jobs:
   pytest-api-tests:
-    name: API Tests (Pytest)
     runs-on: ubuntu-latest
-   
-    # Define the services required for WordPress and the database
+
     services:
-      # 1. WordPress application running
-      wordpress:
-        image: wordpress:latest
-        env:
-          WORDPRESS_DB_HOST: mysql
-          WORDPRESS_DB_USER: root
-          WORDPRESS_DB_PASSWORD: password
-          WORDPRESS_DB_NAME: wordpress_test
-        ports:
-          # FIX 1: Changed port mapping from 8888 to 8000 to match the test's connection attempt.
-          - 8000:80 # Maps container port 80 to host port 8000
-
-        options: >-
-          --health-cmd="curl -f http://localhost/wp-admin/install.php || exit 0"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
-      # 2. Database service
       mysql:
         image: mysql:8.0
         env:
@@ -40,42 +19,83 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping"
+          --health-cmd="mysqladmin ping -ppassword"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
+          --health-retries=5
+
+      wordpress:
+        image: wordpress:latest
+        env:
+          WORDPRESS_DB_HOST: mysql
+          WORDPRESS_DB_USER: root
+          WORDPRESS_DB_PASSWORD: password
+          WORDPRESS_DB_NAME: wordpress_test
+        ports:
+          - 8000:80
+        options: >-
+          --health-cmd="curl -f http://localhost/wp-admin/install.php || exit 0"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
-     
-      ## Setup Python Environment
+
+      # Python setup
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
-      ## FIX 2: Install all required Pytest dependencies
-      - name: Install Pytest and required dependencies (requests, jsonschema)
-        # Added 'jsonschema' to resolve the ModuleNotFoundError from earlier logs
+      # Install pytest + dependencies
+      - name: Install test dependencies
         run: pip install pytest requests jsonschema
 
-      ## Wait for WordPress Service
-      - name: Wait for WordPress to be ready
+      # Wait for WordPress to respond
+      - name: Wait for WordPress
         run: |
-          echo "Waiting for WordPress service to be healthy..."
-          # Increased loop count to 30 for stability (up to 2.5 minutes wait time)
-          for i in {1..30}; do
-            # Check the mapped port on localhost (the runner)
+          echo "Waiting for WordPress to be ready..."
+          for i in {1..60}; do
             curl -s http://localhost:8000 > /dev/null && break
             echo -n "."
             sleep 5
           done
           echo "WordPress is ready."
 
-      ## FIX 3: Run Custom API Tests
-      - name: Run API Tests with Pytest
-        # Uses the likely fixed, cleaner path after renaming files and folders
+      # Install WP-CLI (official method)
+      - name: Install WP-CLI
+        run: |
+          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+
+      # Perform WordPress installation
+      - name: Install WordPress using WP-CLI
+        run: |
+          wp core install \
+            --url="http://localhost:8000" \
+            --title="Test Site" \
+            --admin_user="admin" \
+            --admin_password="password" \
+            --admin_email="admin@example.com" \
+            --skip-email \
+            --allow-root
+
+      # Add sample data needed for API tests
+      - name: Create sample WP data
+        run: |
+          wp post create --post_title="Hello World" --post_status=publish --allow-root
+          wp post create --post_title="Second Post" --post_status=publish --allow-root
+
+          wp user create testuser test@example.com \
+            --role=subscriber --user_pass=password --allow-root
+
+          wp term create category SampleCategory --allow-root
+
+      # Run pytest tests
+      - name: Run API Tests
         run: pytest tests/api_test/
         env:
-          # FIX 4: Set API_BASE_URL to 8000 to match the new service port mapping.
           API_BASE_URL: http://localhost:8000/wp-json/
+
