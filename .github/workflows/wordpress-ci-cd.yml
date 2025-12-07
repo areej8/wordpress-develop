@@ -147,9 +147,7 @@ jobs:
           curl http://localhost:8889 | grep -i wordpress || echo "WordPress might not be fully loaded"
       
       - name: Run Cypress tests
-        run: |
-          cd tests/cypress
-          npx cypress run --config baseUrl=http://localhost:8889
+        run: npx cypress run --config-file tests/cypress/cypress.config.js
         env:
           CYPRESS_BASE_URL: http://localhost:8889
       
@@ -159,8 +157,8 @@ jobs:
         with:
           name: cypress-artifacts
           path: |
-            tests/cypress/cypress/videos/
-            tests/cypress/cypress/screenshots/
+            tests/cypress/videos/
+            tests/cypress/screenshots/
           if-no-files-found: ignore
       
       - name: Stop PHP server
