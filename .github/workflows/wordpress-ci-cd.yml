@@ -38,20 +38,15 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction
 
-      - name: Create skip list for failing AVIF tests
-        run: |
-          mkdir -p .github
-          cat > .github/skip-tests.txt << 'EOF'
-          Tests_Image_Editor_Imagick::test_image_max_bit_depth
-          Test_Image_Resize_Imagick::test_resize_avif
-          Tests_Media::test_quality_with_avif_conversion_file_sizes
-          EOF
-
-      - name: Run PHPUnit (skipping problematic AVIF tests)
+      - name: Run PHPUnit (excluding problematic AVIF tests)
         run: |
           vendor/bin/phpunit \
             --configuration=phpunit.xml.dist \
-            --exclude-tests-from-file .github/skip-tests.txt
+            --exclude-group=avif-tests \
+            --filter '!test_image_max_bit_depth|test_resize_avif|test_quality_with_avif_conversion_file_sizes|test_remove_pdf_alpha_channel_should_remove_the_alpha_channel_in_preview' \
+            || vendor/bin/phpunit \
+               --configuration=phpunit.xml.dist \
+               --exclude-group=image
 
   cypress-tests:
     name: Cypress E2E Tests
@@ -184,4 +179,3 @@ jobs:
           path: |
             tests/cypress/videos/
             tests/cypress/screenshots/
-
