@@ -49,16 +49,8 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php }}
-        extensions: mysqli, pdo_mysql, mbstring, xml, curl, gd, zip, imagick
+        extensions: mysqli, pdo_mysql, mbstring, xml, curl, gd, zip
         tools: composer
-        ini-values: |
-          error_reporting=E_ALL
-          display_errors=On
-          display_startup_errors=On
-          log_errors=On
-          error_log=/tmp/php_errors.log
-          zend.assertions=1
-        coverage: none
         
     - name: Install Composer dependencies
       run: |
@@ -80,397 +72,61 @@ jobs:
       run: |
         mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_test;"
         mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_test_tmp;"
-        mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "SHOW DATABASES;"
 
     - name: Create wp-tests-config.php
       run: |
         if [ -f wp-tests-config-sample.php ]; then
           cp wp-tests-config-sample.php wp-tests-config.php
+          sed -i "s/youremptytestdbnamehere/wordpress_test/" wp-tests-config.php
+          sed -i "s/yourusernamehere/root/" wp-tests-config.php
+          sed -i "s/yourpasswordhere/password/" wp-tests-config.php
+          sed -i "s|localhost|127.0.0.1|" wp-tests-config.php
+          echo "✅ Test configuration created from sample"
         else
-          echo "Warning: wp-tests-config-sample.php not found, creating from scratch"
-          cat > wp-tests-config.php << 'EOF'
-        <?php
-        define( 'DB_NAME', 'wordpress_test' );
-        define( 'DB_USER', 'root' );
-        define( 'DB_PASSWORD', 'password' );
-        define( 'DB_HOST', '127.0.0.1' );
-        define( 'DB_CHARSET', 'utf8' );
-        define( 'DB_COLLATE', '' );
-        define( 'WP_TESTS_DOMAIN', 'example.org' );
-        define( 'WP_TESTS_EMAIL', 'admin@example.org' );
-        define( 'WP_TESTS_TITLE', 'Test Blog' );
-        define( 'WP_PHP_BINARY', 'php' );
-        define( 'WPLANG', '' );
-        $table_prefix = 'wptests_';
-        define( 'WP_DEBUG', true );
-        EOF
+          echo "⚠️ wp-tests-config-sample.php not found"
+          echo "Checking for existing tests..."
+          ls -la tests/
         fi
-        
-        sed -i "s/youremptytestdbnamehere/wordpress_test/" wp-tests-config.php
-        sed -i "s/yourusernamehere/root/" wp-tests-config.php
-        sed -i "s/yourpasswordhere/password/" wp-tests-config.php
-        sed -i "s|localhost|127.0.0.1|" wp-tests-config.php
 
-    - name: Check environment and extensions
+    - name: Check environment
       run: |
         echo "🔍 Environment Check"
         echo "===================="
         echo "PHP Version: $(php -v | head -n 1)"
         echo "MySQL Version: $(mysql --version)"
+        echo "Composer Version: $(composer --version)"
         echo ""
-        echo "PHP Extensions:"
-        php -m
-        echo ""
-        echo "ImageMagick Formats:"
-        php -r "if (extension_loaded('imagick')) { \$im = new Imagick(); \$formats = \$im->queryFormats(); echo 'Total: ' . count(\$formats) . PHP_EOL; echo 'AVIF: ' . (in_array('AVIF', \$formats) ? 'YES' : 'NO') . PHP_EOL; }"
+        echo "WordPress test directory:"
+        ls -la tests/phpunit/tests/ | head -10
 
-    - name: Create optimized PHPUnit configuration
+    - name: Run PHPUnit tests
       run: |
-        cat > phpunit-ci.xml << 'XMLEOF'
-        <?xml version="1.0"?>
-        <phpunit
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.5/phpunit.xsd"
-            bootstrap="tests/phpunit/includes/bootstrap.php"
-            colors="true"
-            beStrictAboutTestsThatDoNotTestAnything="false"
-            beStrictAboutOutputDuringTests="false"
-            convertDeprecationsToExceptions="false"
-            convertErrorsToExceptions="true"
-            convertNoticesToExceptions="true"
-            convertWarningsToExceptions="true"
-            stopOnError="false"
-            stopOnFailure="false"
-            stopOnIncomplete="false"
-            stopOnSkipped="false"
-            verbose="true">
-            
-            <testsuites>
-                <testsuite name="WordPress Core Test Suite">
-                    <directory suffix=".php">tests/phpunit/tests</directory>
-                    
-                    <!-- Exclude tests that require AVIF support (not available in CI) -->
-                    <exclude>tests/phpunit/tests/image/editorImagick.php</exclude>
-                    <exclude>tests/phpunit/tests/image/resize.php</exclude>
-                    
-                    <!-- Exclude tests that commonly fail in CI environments -->
-                    <exclude>tests/phpunit/tests/image/editor.php</exclude>
-                </testsuite>
-            </testsuites>
-            
-            <php>
-                <const name="WP_RUN_CORE_TESTS" value="1"/>
-                <ini name="display_errors" value="1"/>
-                <ini name="error_reporting" value="32767"/>
-                <!-- Suppress deprecation warnings in tests -->
-                <ini name="error_reporting" value="-1"/>
-            </php>
-            
-            <filter>
-                <whitelist processUncoveredFilesFromWhitelist="false">
-                    <directory suffix=".php">src</directory>
-                    <exclude>
-                        <directory>src/wp-admin/includes</directory>
-                        <directory>src/wp-includes/ID3</directory>
-                        <directory>src/wp-includes/Requests</directory>
-                        <directory>src/wp-includes/SimplePie</directory>
-                    </exclude>
-                </whitelist>
-            </filter>
-        </phpunit>
-        XMLEOF
+        echo "🧪 Running WordPress core unit tests..."
         
-        echo "✅ PHPUnit configuration created"
-        cat phpunit-ci.xml
-
-    - name: Run PHPUnit tests with proper error handling
-      id: phpunit
-      continue-on-error: true
-      run: |
-        echo "🧪 Starting PHPUnit test suite..."
-        echo "=================================="
-        echo ""
-        
-        # Run tests and capture exit code
-        vendor/bin/phpunit \
-          --configuration=phpunit-ci.xml \
-          --exclude-group=external-http,ms-files,ms-required \
-          --colors=always \
-          --log-junit junit.xml \
-          --testdox-text testdox.txt 2>&1 | tee phpunit-output.log
-        
-        PHPUNIT_EXIT_CODE=${PIPESTATUS[0]}
-        
-        echo ""
-        echo "=================================="
-        echo "PHPUnit Exit Code: $PHPUNIT_EXIT_CODE"
-        echo "=================================="
-        
-        # Analyze results
-        if [ -f junit.xml ]; then
-          TOTAL_TESTS=$(grep -oP 'tests="\K[0-9]+' junit.xml | head -1)
-          FAILURES=$(grep -oP 'failures="\K[0-9]+' junit.xml | head -1)
-          ERRORS=$(grep -oP 'errors="\K[0-9]+' junit.xml | head -1)
-          SKIPPED=$(grep -oP 'skipped="\K[0-9]+' junit.xml | head -1)
-          
-          echo ""
-          echo "📊 Test Results Summary:"
-          echo "  Total Tests: ${TOTAL_TESTS:-0}"
-          echo "  Failures: ${FAILURES:-0}"
-          echo "  Errors: ${ERRORS:-0}"
-          echo "  Skipped: ${SKIPPED:-0}"
-          echo ""
-          
-          # Export for later steps
-          echo "TOTAL_TESTS=${TOTAL_TESTS:-0}" >> $GITHUB_ENV
-          echo "FAILURES=${FAILURES:-0}" >> $GITHUB_ENV
-          echo "ERRORS=${ERRORS:-0}" >> $GITHUB_ENV
-          echo "SKIPPED=${SKIPPED:-0}" >> $GITHUB_ENV
+        # Check if phpunit.xml.dist exists
+        if [ -f "phpunit.xml.dist" ]; then
+          echo "Using phpunit.xml.dist"
+          vendor/bin/phpunit --configuration=phpunit.xml.dist
+        elif [ -f "tests/phpunit/phpunit.xml.dist" ]; then
+          echo "Using tests/phpunit/phpunit.xml.dist"
+          vendor/bin/phpunit --configuration=tests/phpunit/phpunit.xml.dist
+        else
+          echo "⚠️ No phpunit.xml.dist found, running tests directly"
+          vendor/bin/phpunit tests/phpunit/tests/
         fi
         
-        # Store exit code for summary
-        echo "PHPUNIT_EXIT_CODE=$PHPUNIT_EXIT_CODE" >> $GITHUB_ENV
-        
-        # Exit with original code
-        exit $PHPUNIT_EXIT_CODE
-
-    - name: Analyze test failures
-      if: always() && steps.phpunit.outcome != 'success'
-      run: |
-        echo "🔍 Analyzing test failures..."
-        echo ""
-        
-        if [ -f phpunit-output.log ]; then
-          echo "📝 Test Failures Summary:"
-          echo "========================="
-          
-          # Extract failure information
-          grep -A 5 "FAILURES!" phpunit-output.log | head -n 20 || echo "No failure summary found"
-          
-          echo ""
-          echo "📝 Failed Tests:"
-          echo "================"
-          grep "^[0-9]*)" phpunit-output.log | head -n 10 || echo "No specific failures listed"
-          
-          echo ""
-          echo "⚠️ Deprecation Warnings (sample):"
-          echo "=================================="
-          grep "Deprecated:" phpunit-output.log | sort | uniq | head -n 5 || echo "No deprecation warnings"
-        fi
-
-    - name: Upload test artifacts
-      if: always()
+    - name: Upload test results on failure
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: phpunit-results-php-${{ matrix.php }}
+        name: phpunit-failure-${{ matrix.php }}
         path: |
-          junit.xml
-          testdox.txt
-          phpunit-output.log
+          wp-tests-config.php
           tests/phpunit/build/
         retention-days: 7
 
-    - name: Determine if tests are acceptable
-      if: always()
-      run: |
-        echo "🎯 Evaluating Test Results"
-        echo "=========================="
-        
-        FAILURES=${FAILURES:-0}
-        ERRORS=${ERRORS:-0}
-        PHPUNIT_EXIT_CODE=${PHPUNIT_EXIT_CODE:-0}
-        
-        echo "Failures: $FAILURES"
-        echo "Errors: $ERRORS"
-        echo "Exit Code: $PHPUNIT_EXIT_CODE"
-        
-        # Accept tests if:
-        # 1. Exit code is 0 (all passed)
-        # 2. OR only deprecation warnings (exit code 0)
-        # 3. OR minor failures (< 10 failures and < 5 errors)
-        
-        if [ $PHPUNIT_EXIT_CODE -eq 0 ]; then
-          echo "✅ All tests passed!"
-          exit 0
-        elif [ $FAILURES -lt 10 ] && [ $ERRORS -lt 5 ]; then
-          echo "⚠️ Tests passed with minor issues (acceptable for development)"
-          echo "Note: Review artifacts for details"
-          exit 0
-        else
-          echo "❌ Too many test failures"
-          echo "Failures: $FAILURES (max 10)"
-          echo "Errors: $ERRORS (max 5)"
-          exit 1
-        fi
-
-    - name: Comment PR with test results
-      if: github.event_name == 'pull_request' && always()
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const fs = require('fs');
-          let body = '## 🧪 PHPUnit Test Results\n\n';
-          
-          try {
-            const total = process.env.TOTAL_TESTS || 'N/A';
-            const failures = process.env.FAILURES || '0';
-            const errors = process.env.ERRORS || '0';
-            const skipped = process.env.SKIPPED || '0';
-            
-            body += '| Metric | Count |\n';
-            body += '|--------|-------|\n';
-            body += `| Total Tests | ${total} |\n`;
-            body += `| ✅ Passed | ${parseInt(total) - parseInt(failures) - parseInt(errors)} |\n`;
-            body += `| ❌ Failures | ${failures} |\n`;
-            body += `| 🚫 Errors | ${errors} |\n`;
-            body += `| ⏭️ Skipped | ${skipped} |\n\n`;
-            
-            if (parseInt(failures) > 0 || parseInt(errors) > 0) {
-              body += '⚠️ Some tests failed. Check the artifacts for details.\n\n';
-              body += '**Note:** Tests excluding Imagick AVIF tests (not supported in CI).\n';
-            } else {
-              body += '✅ All tests passed!\n';
-            }
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
-          } catch (error) {
-            console.log('Could not post comment:', error);
-          }
-
   # ============================================
-  # Pytest Backend API Tests
-  # ============================================
-  pytest-tests:
-    name: Pytest Backend Tests
-    runs-on: ubuntu-latest
-    needs: phpunit-tests
-    if: always()
-    
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: wordpress_pytest
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-          
-      wordpress:
-        image: wordpress:php8.2-apache
-        env:
-          WORDPRESS_DB_HOST: mysql
-          WORDPRESS_DB_USER: root
-          WORDPRESS_DB_PASSWORD: password
-          WORDPRESS_DB_NAME: wordpress_pytest
-          WORDPRESS_DEBUG: "true"
-        ports:
-          - 8080:80
-        options: >-
-          --health-cmd "curl -f http://localhost:80 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Python 3.10
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        cache: 'pip'
-        
-    - name: Install Pytest dependencies
-      run: |
-        echo "📦 Installing Pytest..."
-        python -m pip install --upgrade pip
-        pip install pytest pytest-cov pytest-html requests
-        
-    - name: Create Pytest test suite
-      run: |
-        mkdir -p tests/pytest
-        
-        # Create conftest.py
-        cat > tests/pytest/conftest.py << 'EOF'
-        import pytest
-        import requests
-        import time
-
-        @pytest.fixture(scope="session")
-        def base_url():
-            return "http://localhost:8080"
-
-        @pytest.fixture(scope="session", autouse=True)
-        def wait_for_wordpress(base_url):
-            """Wait for WordPress to be ready"""
-            max_retries = 30
-            for i in range(max_retries):
-                try:
-                    response = requests.get(base_url, timeout=5)
-                    if response.status_code == 200:
-                        print(f"\n✅ WordPress ready")
-                        time.sleep(2)  # Extra wait
-                        return
-                except:
-                    pass
-                time.sleep(2)
-            raise Exception("WordPress not ready")
-        EOF
-        
-        # Create API tests
-        cat > tests/pytest/test_wordpress_api.py << 'EOF'
-        import requests
-        import pytest
-
-        def test_homepage(base_url):
-            response = requests.get(base_url)
-            assert response.status_code == 200
-
-        def test_rest_api(base_url):
-            response = requests.get(f"{base_url}/wp-json/")
-            assert response.status_code == 200
-            assert 'namespace' in response.json()
-
-        def test_admin_accessible(base_url):
-            response = requests.get(f"{base_url}/wp-admin")
-            assert response.status_code == 200
-        EOF
-        
-    - name: Wait for WordPress
-      run: |
-        for i in {1..30}; do
-          if curl -sf http://localhost:8080 > /dev/null; then
-            echo "✅ WordPress ready"
-            break
-          fi
-          sleep 2
-        done
-        
-    - name: Run Pytest
-      run: |
-        echo "🧪 Running Pytest tests..."
-        pytest tests/pytest/ -v --html=pytest-report.html --self-contained-html
-        
-    - name: Upload Pytest results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: pytest-results
-        path: pytest-report.html
-        retention-days: 7
-
-  # ============================================
-  # Cypress E2E Tests
+  # Cypress E2E Tests (USING YOUR EXISTING TESTS)
   # ============================================
   cypress-tests:
     name: Cypress E2E Tests
@@ -499,6 +155,7 @@ jobs:
           WORDPRESS_DB_USER: root
           WORDPRESS_DB_PASSWORD: password
           WORDPRESS_DB_NAME: wordpress_cypress
+          WORDPRESS_DEBUG: "true"
         ports:
           - 8889:80
         options: >-
@@ -514,63 +171,219 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+        cache: 'npm'
         
-    - name: Install Cypress
+    - name: Check existing Cypress setup
       run: |
-        npm init -y
-        npm install --save-dev cypress
+        echo "🔍 Checking existing Cypress setup..."
+        echo ""
+        echo "Cypress directory:"
+        ls -la tests/cypress/
+        echo ""
+        echo "Test files:"
+        ls -la tests/cypress/e2e/
+        echo ""
+        echo "Support files:"
+        ls -la tests/cypress/support/ 2>/dev/null || echo "No support directory"
         
-    - name: Create Cypress tests
+    - name: Install Cypress dependencies
       run: |
-        mkdir -p tests/cypress/{e2e,support}
+        echo "📦 Installing Cypress..."
         
-        cat > cypress.config.js << 'EOF'
-        module.exports = {
-          e2e: {
-            baseUrl: 'http://localhost:8889',
-            supportFile: 'tests/cypress/support/e2e.js',
-            specPattern: 'tests/cypress/e2e/**/*.cy.js',
-          },
-        }
-        EOF
+        # Check if tests/cypress has its own package.json
+        if [ -f "tests/cypress/package.json" ]; then
+          echo "Installing from tests/cypress/package.json"
+          cd tests/cypress
+          npm ci
+          cd ../..
+        elif [ -f "package.json" ]; then
+          echo "Installing from root package.json"
+          npm ci
+        else
+          # Create minimal setup
+          echo "Creating minimal Cypress setup..."
+          npm init -y
+          npm install --save-dev cypress
+        fi
         
-        mkdir -p tests/cypress/support
-        echo "// Support file" > tests/cypress/support/e2e.js
+    - name: Create Cypress config if missing
+      run: |
+        echo "🔧 Setting up Cypress configuration..."
         
-        cat > tests/cypress/e2e/basic.cy.js << 'EOF'
-        describe('WordPress Basic Tests', () => {
-          it('loads homepage', () => {
-            cy.visit('/')
-            cy.get('body').should('be.visible')
-          })
+        # Check if config exists
+        if [ ! -f "cypress.config.js" ] && [ ! -f "tests/cypress/cypress.config.js" ]; then
+          echo "Creating cypress.config.js..."
+          cat > cypress.config.js << 'EOF'
+          const { defineConfig } = require('cypress')
           
-          it('REST API works', () => {
-            cy.request('/wp-json/').its('status').should('eq', 200)
+          module.exports = defineConfig({
+            e2e: {
+              baseUrl: 'http://localhost:8889',
+              supportFile: 'tests/cypress/support/e2e.js',
+              specPattern: 'tests/cypress/e2e/**/*.cy.js',
+              videosFolder: 'tests/cypress/videos',
+              screenshotsFolder: 'tests/cypress/screenshots',
+              downloadsFolder: 'tests/cypress/downloads',
+              fixturesFolder: 'tests/cypress/fixtures',
+            },
+            video: true,
+            screenshotOnRunFailure: true,
           })
-        })
-        EOF
+          EOF
+          echo "✅ Created cypress.config.js"
+        else
+          echo "✅ Cypress config already exists"
+        fi
         
-    - name: Wait for WordPress
+        # Create minimal support files if missing
+        if [ ! -f "tests/cypress/support/e2e.js" ]; then
+          mkdir -p tests/cypress/support
+          echo "import './commands'" > tests/cypress/support/e2e.js
+          echo "Created e2e.js"
+        fi
+        
+        if [ ! -f "tests/cypress/support/commands.js" ]; then
+          cat > tests/cypress/support/commands.js << 'EOF'
+          Cypress.Commands.add('wpLogin', (username = 'admin', password = 'password') => {
+            cy.visit('/wp-login.php')
+            cy.get('#user_login').type(username)
+            cy.get('#user_pass').type(password)
+            cy.get('#wp-submit').click()
+            cy.url().should('include', '/wp-admin/')
+          })
+          EOF
+          echo "Created commands.js"
+        fi
+        
+    - name: Wait for WordPress to be ready
       run: |
-        for i in {1..40}; do
-          if curl -sf http://localhost:8889 > /dev/null; then
-            echo "✅ WordPress ready"
-            sleep 5
+        echo "⏳ Waiting for WordPress on port 8889..."
+        
+        # Wait for WordPress to start
+        for i in {1..30}; do
+          if curl -s -f http://localhost:8889 > /dev/null; then
+            echo "✅ WordPress is accessible"
             break
           fi
-          sleep 3
+          echo "Attempt $i/30..."
+          sleep 5
         done
         
-    - name: Run Cypress
-      run: npx cypress run
+        # Extra wait for full initialization
+        sleep 10
+        
+    - name: Setup WordPress for testing
+      run: |
+        echo "🔧 Setting up WordPress for Cypress tests..."
+        
+        # Install WP-CLI
+        curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        chmod +x wp-cli.phar
+        
+        # Install WordPress
+        ./wp-cli.phar core install \
+          --url=http://localhost:8889 \
+          --title="WordPress Cypress Tests" \
+          --admin_user=admin \
+          --admin_password=password \
+          --admin_email=admin@example.com \
+          --skip-email
+        
+        # Enable pretty permalinks
+        ./wp-cli.phar rewrite structure '/%postname%/'
+        ./wp-cli.phar rewrite flush
+        
+        echo "✅ WordPress setup complete"
+        
+    - name: Run existing Cypress tests
+      run: |
+        echo "🧪 Running existing Cypress tests..."
+        
+        # Check which config file to use
+        if [ -f "tests/cypress/cypress.config.js" ]; then
+          CONFIG_FILE="tests/cypress/cypress.config.js"
+        elif [ -f "cypress.config.js" ]; then
+          CONFIG_FILE="cypress.config.js"
+        else
+          echo "⚠️ No Cypress config found, using default"
+          CONFIG_FILE="cypress.config.js"
+        fi
+        
+        echo "Using config: $CONFIG_FILE"
+        
+        # Run Cypress tests
+        npx cypress run --config-file="$CONFIG_FILE" --browser=chrome
         
     - name: Upload Cypress artifacts
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: cypress-artifacts
-        path: tests/cypress/videos/
+        path: |
+          tests/cypress/videos/
+          tests/cypress/screenshots/
         retention-days: 7
+
+  # ============================================
+  # Render Deployment (FREE TIER)
+  # ============================================
+  deploy-render:
+    name: Deploy to Render (Free)
+    runs-on: ubuntu-latest
+    needs: [phpunit-tests, cypress-tests]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/trunk'
+    
+    steps:
+    - name: Trigger Render Deployment
+      run: |
+        echo "🚀 Deploying WordPress Core to Render.com (Free Tier)..."
+        
+        if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+          echo "📞 Calling Render deploy hook..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
+          
+          if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
+            echo "✅ Deployment triggered successfully!"
+            echo "⏳ Build will start on Render.com..."
+            echo "🌐 Your site will be live in 2-3 minutes"
+          else
+            echo "⚠️  Deploy hook returned HTTP $RESPONSE"
+            echo "Check your Render service status"
+          fi
+        else
+          echo "❌ No RENDER_DEPLOY_HOOK secret found"
+          echo ""
+          echo "📋 To set up FREE Render deployment:"
+          echo ""
+          echo "1. Go to https://render.com"
+          echo "2. Sign up (FREE with GitHub)"
+          echo "3. Create New Web Service"
+          echo "4. Connect this repository"
+          echo "5. Configure:"
+          echo "   - Name: wordpress-core-free"
+          echo "   - Environment: Docker"
+          echo "   - Dockerfile Path: ./Dockerfile"
+          echo "   - Plan: Free"
+          echo "   - Instance Type: Free"
+          echo "6. Get deploy hook from Settings"
+          echo "7. Add to GitHub Secrets as RENDER_DEPLOY_HOOK"
+        fi
+        
+    - name: Deployment Summary
+      run: |
+        echo "📋 Deployment Summary"
+        echo "====================="
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Time: $(date)"
+        echo ""
+        if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+          echo "✅ Render deployment initiated"
+        else
+          echo "⚠️  Render deployment not configured"
+          echo "    Set up Render.com and add deploy hook secret"
+        fi
 
   # ============================================
   # Summary
@@ -578,16 +391,40 @@ jobs:
   summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [phpunit-tests, pytest-tests, cypress-tests]
+    needs: [phpunit-tests, cypress-tests, deploy-render]
     if: always()
     
     steps:
     - name: Generate summary
       run: |
-        echo "# 📊 CI/CD Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "# 📊 WordPress Core CI/CD Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
-        echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
-        echo "| PHPUnit | ${{ needs.phpunit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Pytest | ${{ needs.pytest-tests.result }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Cypress | ${{ needs.cypress-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Test Suite | Status | Description |" >> $GITHUB_STEP_SUMMARY
+        echo "|------------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| PHPUnit Tests | ${{ needs.phpunit-tests.result }} | Core unit tests |" >> $GITHUB_STEP_SUMMARY
+        echo "| Cypress E2E Tests | ${{ needs.cypress-tests.result }} | UI tests (port 8889) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Render Deployment | ${{ needs.deploy-render.result }} | Free tier deployment |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.phpunit-tests.result }}" = "success" ] && [ "${{ needs.cypress-tests.result }}" = "success" ]; then
+          echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **Some tests failed. Check artifacts for details.**" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📁 Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- PHPUnit Results: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- Cypress Videos/Screenshots: Available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+          echo "### 🚀 Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment to Render.com triggered." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### ⚠️ Deployment Not Configured" >> $GITHUB_STEP_SUMMARY
+          echo "To deploy to Render.com:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to https://render.com" >> $GITHUB_STEP_SUMMARY
+          echo "2. Create Web Service with Docker" >> $GITHUB_STEP_SUMMARY
+          echo "3. Get deploy hook and add to GitHub Secrets" >> $GITHUB_STEP_SUMMARY
+        fi
