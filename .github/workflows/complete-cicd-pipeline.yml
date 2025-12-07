@@ -1,7 +1,3 @@
-# .github/workflows/complete-cicd-pipeline.yml
-# Complete CI/CD Pipeline: GitHub → Build → Test → Staging (Render) → Production (Render)
-# 100% FREE - No Credit Card Required
-
 name: Complete WordPress CI/CD Pipeline
 
 on:
