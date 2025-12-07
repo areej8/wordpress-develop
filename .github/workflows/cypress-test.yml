@@ -91,25 +91,26 @@ jobs:
       CYPRESS_VIDEO: ${CYPRESS_VIDEO-true}
       CYPRESS_SCREENSHOT_ON_RUN_FAILURE: ${CYPRESS_SCREENSHOT_ON_RUN_FAILURE-true}
     entrypoint: ""
-    command: |
-      sh -c "
-      echo '==== Waiting for WordPress to be ready ===='
-      max_attempts=60
-      attempt=0
-      until wget --spider -q http://wordpress-develop 2>/dev/null || [ \$$attempt -eq \$$max_attempts ]; do
-        echo \"Attempt \$$((attempt+1))/\$$max_attempts: WordPress not ready yet...\"
-        sleep 3
-        attempt=\$$((attempt+1))
-      done
-      
-      if [ \$$attempt -eq \$$max_attempts ]; then
-        echo 'ERROR: WordPress did not become ready in time'
-        exit 1
-      fi
-      
-      echo '==== WordPress is ready! Running Cypress tests ===='
-      npx cypress run --browser electron --headless
-      "
+    command:
+      - sh
+      - -c
+      - |
+        echo '==== Waiting for WordPress to be ready ===='
+        max_attempts=60
+        attempt=0
+        until wget --spider -q http://wordpress-develop 2>/dev/null || [ $attempt -eq $max_attempts ]; do
+          echo "Attempt $((attempt+1))/$max_attempts: WordPress not ready yet..."
+          sleep 3
+          attempt=$((attempt+1))
+        done
+        
+        if [ $attempt -eq $max_attempts ]; then
+          echo 'ERROR: WordPress did not become ready in time'
+          exit 1
+        fi
+        
+        echo '==== WordPress is ready! Running Cypress tests ===='
+        npx cypress run --browser electron --headless
     depends_on:
       wordpress-develop:
         condition: service_started
