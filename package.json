@@ -41,15 +41,15 @@
 		"dotenv-expand": "12.0.3",
 		"grunt": "1.6.1",
 		"grunt-banner": "^0.6.0",
-		"grunt-contrib-clean": "~2.0.1",
+		"grunt-contrib-clean": "2.0.1",
 		"grunt-contrib-concat": "2.1.0",
-		"grunt-contrib-copy": "~1.0.0",
-		"grunt-contrib-cssmin": "~5.0.0",
+		"grunt-contrib-copy": "1.0.0",
+		"grunt-contrib-cssmin": "5.0.0",
 		"grunt-contrib-imagemin": "~4.0.0",
 		"grunt-contrib-jshint": "3.2.0",
 		"grunt-contrib-qunit": "~10.1.1",
-		"grunt-contrib-uglify": "~5.2.2",
-		"grunt-contrib-watch": "~1.1.0",
+		"grunt-contrib-uglify": "5.2.2",
+		"grunt-contrib-watch": "1.1.0",
 		"grunt-file-append": "0.0.7",
 		"grunt-jsdoc": "2.4.1",
 		"grunt-legacy-util": "^2.0.1",
@@ -72,7 +72,8 @@
 		"uuid": "13.0.0",
 		"wait-on": "9.0.3",
 		"webpack": "5.98.0",
-		"webpack-livereload-plugin": "3.0.2"
+		"webpack-livereload-plugin": "3.0.2",
+		"cypress": "^13.6.0"
 	},
 	"dependencies": {
 		"@wordpress/a11y": "4.33.1",
@@ -197,6 +198,12 @@
 		"test:e2e": "wp-scripts test-playwright --config tests/e2e/playwright.config.js",
 		"test:visual": "wp-scripts test-playwright --config tests/visual-regression/playwright.config.js",
 		"sync-gutenberg-packages": "grunt sync-gutenberg-packages",
-		"postsync-gutenberg-packages": "grunt wp-packages:sync-stable-blocks && grunt build --dev && grunt build"
+		"postsync-gutenberg-packages": "grunt wp-packages:sync-stable-blocks && grunt build --dev && grunt build",
+		"test": "npm run test:unit && npm run test:e2e",
+    		"test:unit": "vendor/bin/phpunit --configuration=phpunit.xml.dist",
+    		"test:e2e": "cypress run --config-file=tests/cypress/cypress.config.js",
+    		"test:e2e:open": "cypress open --config-file=tests/cypress/cypress.config.js",
+    		"test:e2e:login": "cypress run --spec 'tests/cypress/e2e/login.cy.js'",
+    		"test:e2e:dashboard": "cypress run --spec 'tests/cypress/e2e/dashboard_*.cy.js'"
 	}
 }
