@@ -1,0 +1,141 @@
+# .github/workflows/wordpress-core-tests.yml
+name: WordPress Core Unit Tests
+
+on:
+  push:
+    branches: [ trunk, main ]
+  pull_request:
+    branches: [ trunk, main ]
+  workflow_dispatch:
+
+env:
+  LOCAL_PHP: '8.2'
+  LOCAL_DB_TYPE: mysql
+  LOCAL_DB_VERSION: '8.0'
+
+jobs:
+  unit-tests:
+    name: Run WordPress Core Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2', '8.3']
+        include:
+          - php-version: '8.2'
+            experimental: false
+            coverage: true
+    
+    steps:
+    - name: 📥 Checkout WordPress Core
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 🐳 Start Docker Environment
+      env:
+        LOCAL_PHP: ${{ matrix.php-version }}
+      run: |
+        echo "Starting WordPress development environment with PHP ${{ matrix.php-version }}..."
+        docker-compose up -d --build
+        
+        echo "Container status:"
+        docker-compose ps
+        
+        echo "Waiting for services..."
+        sleep 30
+        
+    - name: 🔧 Setup Test Environment
+      run: |
+        echo "Setting up WordPress test environment..."
+        
+        # Run the WordPress test setup script
+        docker-compose exec -T cli bash -c "
+          cd /var/www &&
+          ./bin/install-wp-tests.sh wordpress_test root password mysql latest true
+        "
+        
+        echo "Test environment setup complete"
+        
+    - name: 🧪 Run WordPress Core Tests
+      run: |
+        echo "Running WordPress core unit tests..."
+        
+        # Run tests from the tests directory
+        docker-compose exec -T cli bash -c "
+          cd /var/www &&
+          vendor/bin/phpunit \
+            --configuration=tests/phpunit/phpunit.xml.dist \
+            --testsuite='default' \
+            --verbose \
+            --colors=always
+        "
+        
+    - name: 📊 Run Specific Test Groups
+      if: matrix.php-version == '8.2'
+      run: |
+        echo "Running specific test groups..."
+        
+        # Common test groups in WordPress core
+        TEST_GROUPS=(
+          "general"
+          "formatting"
+          "kses"
+          "post"
+          "taxonomy"
+          "user"
+          "option"
+        )
+        
+        for group in "${TEST_GROUPS[@]}"; do
+          echo "=== Running $group tests ==="
+          docker-compose exec -T cli bash -c "
+            cd /var/www &&
+            vendor/bin/phpunit \
+              --configuration=tests/phpunit/phpunit.xml.dist \
+              --group='$group' \
+              --verbose \
+              --colors=always || true
+          "
+        done
+        
+    - name: 📈 Generate Test Coverage (PHP 8.2 only)
+      if: matrix.php-version == '8.2'
+      run: |
+        echo "Generating test coverage report..."
+        
+        docker-compose exec -T cli bash -c "
+          cd /var/www &&
+          vendor/bin/phpunit \
+            --configuration=tests/phpunit/phpunit.xml.dist \
+            --coverage-html=coverage-report \
+            --coverage-clover=coverage.xml \
+            --verbose
+        "
+        
+        # Copy coverage report from container
+        docker cp $(docker-compose ps -q cli):/var/www/coverage-report ./coverage-report/ || true
+        
+    - name: 📤 Upload Coverage Report
+      if: matrix.php-version == '8.2'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-php-${{ matrix.php-version }}
+        path: |
+          coverage-report/
+          coverage.xml
+        retention-days: 7
+        
+    - name: 🧹 Cleanup
+      if: always()
+      run: |
+        echo "Cleaning up Docker environment..."
+        docker-compose down -v
+        
+    - name: ✅ Test Summary
+      if: always()
+      run: |
+        echo "WordPress Core Tests Completed"
+        echo "PHP Version: ${{ matrix.php-version }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"

@@ -1,0 +1,42 @@
+# .github/workflows/build-and-deploy.yml
+name: Build and Deploy WordPress Test
+
+on:
+  push:
+    branches: [ trunk ]
+  workflow_dispatch:
+
+jobs:
+  build-wordpress:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build WordPress from source
+      run: |
+        echo "Building WordPress from development source..."
+        
+        # Create build directory
+        mkdir -p build/wordpress
+        
+        # Copy WordPress core files
+        cp -r src/* build/wordpress/
+        
+        # Remove development files
+        rm -rf build/wordpress/tests
+        rm -rf build/wordpress/node_modules
+        
+        echo "Build complete. Size:"
+        du -sh build/wordpress/
+    
+    - name: Create deployment package
+      run: |
+        cd build && tar -czf wordpress-build-$(date +%Y%m%d).tar.gz wordpress/
+        ls -lh *.tar.gz
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: wordpress-build
+        path: build/*.tar.gz

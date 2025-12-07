@@ -1,0 +1,39 @@
+# .github/workflows/test-matrix.yml
+name: WordPress Component Tests
+
+on:
+  pull_request:
+    branches: [ trunk ]
+  workflow_dispatch:
+
+jobs:
+  component-tests:
+    name: Test Component - ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        component: [
+          'post', 'taxonomy', 'user', 'comment', 'option',
+          'theme', 'widget', 'rest-api', 'xmlrpc', 'media'
+        ]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Start Environment
+      run: |
+        docker-compose up -d
+        docker-compose exec -T cli ./bin/install-wp-tests.sh wordpress_test root password mysql latest true
+    
+    - name: Run Component Tests
+      run: |
+        echo "Running tests for: ${{ matrix.component }}"
+        docker-compose exec -T cli vendor/bin/phpunit \
+          --configuration=tests/phpunit/phpunit.xml.dist \
+          --group="${{ matrix.component }}" \
+          --verbose
+    
+    - name: Cleanup
+      if: always()
+      run: docker-compose down -v
