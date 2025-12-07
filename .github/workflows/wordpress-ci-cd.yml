@@ -1,0 +1,46 @@
+# .github/workflows/wordpress-minimal.yml
+name: WordPress Core Minimal CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: 🐘 Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mysqli, pdo_mysql, mbstring, xml
+        tools: composer, phpunit
+    
+    - name: 📦 Install dependencies
+      run: |
+        composer install --no-progress
+        
+    - name: 🗄️ Setup database
+      run: |
+        mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_test;"
+        
+    - name: 🧪 Run a single test
+      run: |
+        phpunit --configuration=tests/phpunit/phpunit.xml.dist \
+          tests/phpunit/tests/general/wpGetScriptLoaderTag.php \
+          --verbose
