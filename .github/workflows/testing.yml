@@ -1,5 +1,8 @@
 name: WordPress CI/CD
 
+env:
+  ACTIONS_SETUP_NODE_CACHE: 'false'
+
 on:
   push:
     branches: [ "trunk" ]
