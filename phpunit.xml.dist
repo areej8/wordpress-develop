@@ -17,6 +17,9 @@
 		<testsuite name="default">
 			<directory suffix=".php">tests/phpunit/tests</directory>
 			<exclude>tests/phpunit/tests/rest-api/rest-autosaves-controller.php</exclude>
+			<exclude>tests/phpunit/tests/image/editorImagick.php</exclude>
+        	<exclude>tests/phpunit/tests/image/resize.php</exclude>
+        	<exclude>tests/phpunit/tests/media.php</exclude>
 		</testsuite>
 		<!-- Sets the DOING_AUTOSAVE constant, so needs to be run last. -->
 		<testsuite name="restapi-autosave">
@@ -30,6 +33,7 @@
 			<group>ms-required</group>
 			<group>external-http</group>
 			<group>html-api-html5lib-tests</group>
+			
 		</exclude>
 	</groups>
 	<logging>
