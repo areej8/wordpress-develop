@@ -1,0 +1,94 @@
+# .github/workflows/deploy-free.yml
+name: Deploy to Render (Free)
+
+on:
+  push:
+    branches: [main, trunk]
+  workflow_dispatch:
+
+jobs:
+  test-before-deploy:
+    name: Quick Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Quick validation
+      run: |
+        echo "✅ Repository: ${{ github.repository }}"
+        echo "✅ Branch: ${{ github.ref_name }}"
+        [ -f "Dockerfile" ] && echo "✅ Dockerfile exists"
+        [ -d "src" ] && echo "✅ WordPress src directory exists"
+        ls -la src/ | head -5
+
+  deploy:
+    name: Deploy to Render Free
+    runs-on: ubuntu-latest
+    needs: test-before-deploy
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/trunk'
+    
+    steps:
+    - name: 🚀 Deploy using Render Webhook
+      run: |
+        echo "🚀 Starting FREE Render deployment..."
+        
+        if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+          echo "📞 Calling Render deploy hook..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}")
+          
+          if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
+            echo "✅ Deployment triggered successfully!"
+            echo "⏳ Build will start on Render.com..."
+            echo "🌐 Your site will be live in 2-3 minutes"
+          else
+            echo "⚠️  Deploy hook returned HTTP $RESPONSE"
+            echo "Check your Render service status"
+          fi
+        else
+          echo "❌ No RENDER_DEPLOY_HOOK secret found"
+          echo ""
+          echo "📋 To set up FREE Render deployment:"
+          echo ""
+          echo "1. Go to https://render.com"
+          echo "2. Sign up (FREE with GitHub)"
+          echo "3. Create New Web Service"
+          echo "4. Connect this repository"
+          echo "5. Configure:"
+          echo "   - Name: wordpress-core-free"
+          echo "   - Environment: Docker"
+          echo "   - Dockerfile Path: ./Dockerfile"
+          echo "   - Plan: Free"
+          echo "   - Instance Type: Free"
+          echo "6. Get deploy hook from Settings"
+          echo "7. Add to GitHub Secrets as RENDER_DEPLOY_HOOK"
+          echo ""
+          echo "For now, you can manually deploy from Render dashboard."
+        fi
+    
+    - name: 📊 Deployment Status
+      run: |
+        echo "📋 Deployment Summary"
+        echo "====================="
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Triggered by: ${{ github.actor }}"
+        echo "Time: $(date)"
+        echo ""
+        echo "✅ If deploy hook was configured, Render is building your site."
+        echo "⏳ Check Render dashboard for progress."
+        
+    - name: ⚠️ Free Tier Notes
+      if: always()
+      run: |
+        echo "📝 IMPORTANT - Free Tier Limitations:"
+        echo "====================================="
+        echo "• 750 hours/month (~31 days continuous)"
+        echo "• 512MB RAM"
+        echo "• Sleeps after 15 minutes of inactivity"
+        echo "• Wakes up when visited (30-60 second delay)"
+        echo "• No persistent database (use SQLite if needed)"
+        echo ""
+        echo "💡 Tip: For testing, free tier is perfect!"
+        echo "💡 Tip: Visit frequently to keep it awake"
