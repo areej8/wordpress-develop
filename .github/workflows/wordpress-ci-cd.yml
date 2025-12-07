@@ -73,20 +73,20 @@ jobs:
         
     - name: Run specific test group (formatting)
       run: |
-      echo "Running formatting tests..."
-      vendor/bin/phpunit \
-      --configuration=phpunit.xml.dist \
-      --group=formatting \
-      --coverage-text
+       echo "Running formatting tests..."
+       vendor/bin/phpunit \
+       --configuration=phpunit.xml.dist \
+       --group=formatting \
+       --coverage-text
 
         
     - name: Run specific test group (formatting)
       run: |
-      echo "Running formatting tests..."
-      vendor/bin/phpunit \
-      --configuration=tests/phpunit/phpunit.xml.dist \
-      --group=formatting \
-      --coverage-text
+       echo "Running formatting tests..."
+       vendor/bin/phpunit \
+       --configuration=tests/phpunit/phpunit.xml.dist \
+       --group=formatting \
+       --coverage-text
         
     - name: Upload coverage
       uses: actions/upload-artifact@v4
