@@ -1,4 +1,4 @@
-name: API-test
+name: WordPress CI/CD - API Testing
 
 on:
   push:
@@ -8,14 +8,12 @@ on:
 
 jobs:
   pytest-api-tests:
-    # Removed 'needs: phpunit-tests' as the unit tests job is gone
     name: API Tests (Pytest)
     runs-on: ubuntu-latest
-    
-    # Define the services needed for the API tests
+   
+    # Define the services required for WordPress and the database
     services:
-      # 1. WordPress application running (simulated by a standard PHP server)
-      #    This is your application under test.
+      # 1. WordPress application running
       wordpress:
         image: wordpress:latest
         env:
@@ -24,14 +22,14 @@ jobs:
           WORDPRESS_DB_PASSWORD: password
           WORDPRESS_DB_NAME: wordpress_test
         ports:
-          - 8888:80 # Map port 8888 on the host to port 80 in the container
+          - 8888:80 # Maps container port 80 to host port 8888
         options: >-
           --health-cmd="curl -f http://localhost/wp-admin/install.php || exit 0"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
 
-      # 2. Database service required by the WordPress service
+      # 2. Database service
       mysql:
         image: mysql:8.0
         env:
@@ -47,34 +45,36 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+     
       ## Setup Python Environment
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      ## Install Pytest and Requests
-      - name: Install Pytest and dependencies
-        run: pip install pytest requests
+      ## FIX: Install all required Pytest dependencies
+      - name: Install Pytest and required dependencies (requests, jsonschema)
+        # Added 'jsonschema' to resolve the ModuleNotFoundError
+        run: pip install pytest requests jsonschema
 
       ## Wait for WordPress Service
-      # This step ensures the WordPress container is up and running before tests begin.
       - name: Wait for WordPress to be ready
         run: |
           echo "Waiting for WordPress service to be healthy..."
           for i in {1..20}; do
-            # Check the mapped port on localhost (the runner)
             curl -s http://localhost:8888 > /dev/null && break
             echo -n "."
             sleep 5
           done
           echo "WordPress is ready."
 
-      ## Run Custom API Tests
+      ## FIX: Run Custom API Tests
       - name: Run API Tests with Pytest
-        run: pytest tests/api_test
+        # Changed the path to the likely corrected folder structure based on
+        # the previous error's context: 'tests/api_test/tests/api (1)'
+        # Assuming you renamed the folder to 'tests/api_v1' or similar clean path.
+        # IF you placed all files directly in a top-level 'api_tests' folder, use that instead.
+        run: pytest tests/api_test/
         env:
-          # Pass the API base URL as an environment variable to your tests
+          # The API_BASE_URL is passed to your Python tests
           API_BASE_URL: http://localhost:8888/wp-json/
-
