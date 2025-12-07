@@ -1,4 +1,4 @@
-name: WordPress CI/CD
+name: Cypress
 
 on:
   push:
