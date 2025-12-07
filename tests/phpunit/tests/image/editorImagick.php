@@ -5,6 +5,7 @@
  *
  * @group image
  * @group media
+ * @group image-avif
  * @group wp-image-editor-imagick
  */
 require_once __DIR__ . '/base.php';

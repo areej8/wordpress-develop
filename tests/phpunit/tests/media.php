@@ -3,6 +3,7 @@
 /**
  * @group media
  * @group shortcode
+ * @group image-avif
  */
 class Tests_Media extends WP_UnitTestCase {
 

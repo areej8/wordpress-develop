@@ -2,6 +2,7 @@
 
 /**
  * Base class for testing image resize functionality.
+ * @group image-avif
  */
 require_once __DIR__ . '/base.php';
 
