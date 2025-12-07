@@ -31,7 +31,7 @@
 			<group>external-http</group>
 			<group>html-api-html5lib-tests</group>
 			<group>image-avif</group>
-		</exclude>html
+		</exclude>
 	</groups>
 	<logging>
 		<log type="junit" target="tests/phpunit/build/logs/junit.xml" />
