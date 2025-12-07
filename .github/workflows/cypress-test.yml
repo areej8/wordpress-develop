@@ -1,4 +1,4 @@
-name: CI/CD with Docker Compose
+name: Cypress-test
 
 on:
   push:
@@ -7,132 +7,372 @@ on:
     branches: [ "trunk" ]
 
 jobs:
-  cypress-docker:
-    name: Cypress with Docker Compose
+  cypress-tests:
+    name: Cypress E2E Tests
     runs-on: ubuntu-latest
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-      - name: Setup Docker Compose
-        run: |
-          docker compose version
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
       
-      - name: Create docker-compose.yml
+      - name: Install npm dependencies
         run: |
-          cat > docker-compose.yml << 'EOF'
-          version: '3.8'
+          echo "==== Installing npm dependencies ===="
+          npm ci
+      
+      - name: Build WordPress
+        run: |
+          echo "==== Building WordPress ===="
+          npm run build:dev
+      
+      - name: Set up environment variables
+        run: |
+          cat > .env << EOF
+          LOCAL_PHP=8.2-fpm
+          LOCAL_PORT=8889
+          LOCAL_DIR=src
+          LOCAL_DB_TYPE=mysql
+          LOCAL_DB_VERSION=8.0
+          LOCAL_PHP_XDEBUG=false
+          LOCAL_PHP_MEMCACHED=false
+          PHP_FPM_UID=1000
+          PHP_FPM_GID=1000
+          CYPRESS_VIDEO=true
+          CYPRESS_SCREENSHOT_ON_RUN_FAILURE=true
+          EOF
           
-          services:
-            mysql:
-              image: mysql:8.0
-              environment:
-                MYSQL_ROOT_PASSWORD: password
-                MYSQL_DATABASE: wordpress_cypress
-              ports:
-                - "3306:3306"
-              healthcheck:
-                test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-                timeout: 20s
-                retries: 10
-              
-            wordpress:
-              build: .
-              depends_on:
-                mysql:
-                  condition: service_healthy
-              ports:
-                - "8889:80"
-              environment:
-                WORDPRESS_DB_HOST: mysql
-                WORDPRESS_DB_USER: root
-                WORDPRESS_DB_PASSWORD: password
-                WORDPRESS_DB_NAME: wordpress_cypress
-                WORDPRESS_DEBUG: 1
-              volumes:
-                - ./:/var/www/html
-                - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+          cat .env
+      
+      - name: Create Cypress directories
+        run: |
+          mkdir -p tests/cypress/screenshots
+          mkdir -p tests/cypress/videos
+          chmod -R 777 tests/cypress
+      
+      - name: Add Cypress service to docker-compose
+        run: |
+          cat >> docker-compose.yml << 'EOF'
           
+            ##
+            # The Cypress container for E2E testing.
+            ##
             cypress:
-              image: cypress/included:12.0.0
-              depends_on:
-                - wordpress
+              image: cypress/included:13.6.0
+              networks:
+                - wpdevnet
               working_dir: /e2e
               volumes:
                 - ./tests/cypress:/e2e
-                - ./tests/cypress/screenshots:/e2e/screenshots
-                - ./tests/cypress/videos:/e2e/videos
               environment:
-                CYPRESS_BASE_URL: http://wordpress:80
+                CYPRESS_baseUrl: http://wordpress-develop
                 CYPRESS_WP_USERNAME: admin
                 CYPRESS_WP_PASSWORD: password
+                CYPRESS_VIDEO: ${CYPRESS_VIDEO-true}
+                CYPRESS_SCREENSHOT_ON_RUN_FAILURE: ${CYPRESS_SCREENSHOT_ON_RUN_FAILURE-true}
+              entrypoint: ""
               command: |
-                bash -c "
-                echo 'Waiting for WordPress to be ready...'
-                while ! curl -s http://wordpress:80 > /dev/null; do sleep 2; done
-                echo 'Running Cypress tests...'
-                npx cypress run
+                sh -c "
+                echo '==== Waiting for WordPress to be ready ===='
+                max_attempts=60
+                attempt=0
+                until wget --spider -q http://wordpress-develop 2>/dev/null || [ \$$attempt -eq \$$max_attempts ]; do
+                  echo \"Attempt \$$((attempt+1))/\$$max_attempts: WordPress not ready yet...\"
+                  sleep 3
+                  attempt=\$$((attempt+1))
+                done
+                
+                if [ \$$attempt -eq \$$max_attempts ]; then
+                  echo 'ERROR: WordPress did not become ready in time'
+                  exit 1
+                fi
+                
+                echo '==== WordPress is ready! Running Cypress tests ===='
+                npx cypress run --browser electron --headless
                 "
-          EOF
-          
-          cat > Dockerfile << 'EOF'
-          FROM wordpress:php8.2-apache
-          
-          # Install dependencies and build WordPress
-          RUN apt-get update && apt-get install -y \
-              nodejs npm git curl \
-              && rm -rf /var/lib/apt/lists/*
-          
-          WORKDIR /var/www/html
-          
-          # Copy WordPress files
-          COPY . .
-          
-          # Install and build WordPress
-          RUN npm install && npm run build:dev
-          
-          # Set permissions
-          RUN chown -R www-data:www-data /var/www/html
+              depends_on:
+                wordpress-develop:
+                  condition: service_started
+                mysql:
+                  condition: service_healthy
           EOF
       
-      - name: Build and start Docker environment
+      - name: Start Docker Compose services
         run: |
-          docker compose up -d
+          echo "==== Starting Docker Compose services ===="
+          docker compose up -d wordpress-develop php mysql cli
+          
+          echo "==== Waiting for services to initialize ===="
+          sleep 15
+          
+          echo "==== Service status ===="
           docker compose ps
-          sleep 30  # Wait for services to start
       
-      - name: Install WordPress via WP-CLI
+      - name: Wait for MySQL to be healthy
         run: |
-          docker compose exec -T wordpress wp core install \
-            --url=http://localhost:8889 \
-            --title="Test Site" \
-            --admin_user=admin \
-            --admin_password=password \
-            --admin_email=admin@example.com \
-            --skip-email
+          echo "==== Waiting for MySQL to be healthy ===="
+          max_attempts=30
+          attempt=0
+          
+          until docker compose ps mysql | grep -q "healthy" || [ $attempt -eq $max_attempts ]; do
+            echo "Attempt $((attempt+1))/$max_attempts: Waiting for MySQL..."
+            docker compose ps mysql
+            sleep 3
+            attempt=$((attempt+1))
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "ERROR: MySQL did not become healthy"
+            docker compose logs mysql
+            exit 1
+          fi
+          
+          echo "✓ MySQL is healthy"
+      
+      - name: Wait for WordPress to be accessible
+        run: |
+          echo "==== Waiting for WordPress to respond ===="
+          max_attempts=60
+          attempt=0
+          
+          until curl -f -s http://localhost:8889 > /dev/null 2>&1 || [ $attempt -eq $max_attempts ]; do
+            echo "Attempt $((attempt+1))/$max_attempts: Waiting for WordPress..."
+            sleep 3
+            attempt=$((attempt+1))
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "ERROR: WordPress is not accessible"
+            echo "==== Nginx logs ===="
+            docker compose logs wordpress-develop
+            echo "==== PHP logs ===="
+            docker compose logs php
+            exit 1
+          fi
+          
+          echo "✓ WordPress is accessible at http://localhost:8889"
+      
+      - name: Install WordPress
+        run: |
+          echo "==== Installing WordPress via WP-CLI ===="
+          docker compose run --rm cli wp core install \
+            --url="http://localhost:8889" \
+            --title="WordPress Develop" \
+            --admin_user="admin" \
+            --admin_password="password" \
+            --admin_email="admin@example.com" \
+            --skip-email \
+            --path="/var/www/src"
+          
+          echo "==== Verifying WordPress installation ===="
+          docker compose run --rm cli wp core version --path="/var/www/src"
+          docker compose run --rm cli wp user list --path="/var/www/src"
+      
+      - name: Configure WordPress for testing
+        run: |
+          echo "==== Configuring WordPress ===="
+          
+          # Set permalink structure
+          docker compose run --rm cli wp rewrite structure '/%postname%/' --path="/var/www/src" || true
+          
+          # Flush rewrite rules
+          docker compose run --rm cli wp rewrite flush --path="/var/www/src" || true
+          
+          # Set timezone
+          docker compose run --rm cli wp option update timezone_string 'UTC' --path="/var/www/src" || true
+          
+          echo "✓ WordPress configured for testing"
+      
+      - name: Verify WordPress is working
+        run: |
+          echo "==== Testing WordPress endpoints ===="
+          
+          # Test home page
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8889)
+          echo "Home page: HTTP $response"
+          
+          # Test login page
+          login_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8889/wp-login.php)
+          echo "Login page: HTTP $login_response"
+          
+          # Test admin
+          admin_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8889/wp-admin/)
+          echo "Admin redirect: HTTP $admin_response"
+          
+          if [ "$login_response" = "200" ]; then
+            echo "✓ WordPress is working correctly"
+          else
+            echo "✗ WordPress login page returned HTTP $login_response"
+            docker compose logs wordpress-develop
+            docker compose logs php
+            exit 1
+          fi
+      
+      - name: Show WordPress info
+        run: |
+          echo "==== WordPress Information ===="
+          docker compose run --rm cli wp core check-update --path="/var/www/src" || true
+          docker compose run --rm cli wp plugin list --path="/var/www/src" || true
+          docker compose run --rm cli wp theme list --path="/var/www/src" || true
       
       - name: Run Cypress tests
         run: |
-          docker compose logs cypress
+          echo "==== Running Cypress tests ===="
+          docker compose up cypress --abort-on-container-exit --exit-code-from cypress
+        continue-on-error: true
+        id: cypress-run
       
-      - name: Get test results
+      - name: Get Cypress container logs
         if: always()
         run: |
-          docker compose logs cypress > cypress.log
-          cat cypress.log
+          echo "==== Cypress logs ===="
+          docker compose logs cypress 2>&1 || echo "No Cypress logs available"
       
-      - name: Upload artifacts
+      - name: Check Cypress exit code
+        if: always()
+        id: cypress-result
+        run: |
+          # Get the exit code from the Cypress container
+          exit_code=$(docker compose ps cypress --format json 2>/dev/null | jq -r '.[0].ExitCode // 1' || echo "1")
+          echo "Cypress exit code: $exit_code"
+          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+      
+      - name: Copy test artifacts from container
+        if: always()
+        run: |
+          echo "==== Copying test artifacts from Cypress container ===="
+          
+          # Get the Cypress container ID
+          container_id=$(docker compose ps -q cypress 2>/dev/null)
+          
+          if [ -n "$container_id" ] && [ "$container_id" != "null" ]; then
+            echo "Found Cypress container: $container_id"
+            
+            # Copy screenshots
+            if docker exec "$container_id" test -d /e2e/screenshots 2>/dev/null; then
+              docker cp ${container_id}:/e2e/screenshots ./tests/cypress/ 2>/dev/null && echo "✓ Screenshots copied" || echo "No screenshots to copy"
+            fi
+            
+            # Copy videos
+            if docker exec "$container_id" test -d /e2e/videos 2>/dev/null; then
+              docker cp ${container_id}:/e2e/videos ./tests/cypress/ 2>/dev/null && echo "✓ Videos copied" || echo "No videos to copy"
+            fi
+          else
+            echo "Cypress container not found, checking volume-mounted directories"
+          fi
+          
+          echo "==== Local artifact directories ===="
+          ls -la tests/cypress/screenshots/ 2>/dev/null || echo "No screenshots directory"
+          ls -la tests/cypress/videos/ 2>/dev/null || echo "No videos directory"
+      
+      - name: Upload Cypress screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cypress-results
-          path: |
-            tests/cypress/screenshots
-            tests/cypress/videos
-            cypress.log
+          name: cypress-screenshots-${{ github.run_number }}
+          path: tests/cypress/screenshots/
+          if-no-files-found: ignore
+          retention-days: 7
       
-      - name: Stop Docker environment
+      - name: Upload Cypress videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos-${{ github.run_number }}
+          path: tests/cypress/videos/
+          if-no-files-found: ignore
+          retention-days: 7
+      
+      - name: Generate test report
         if: always()
         run: |
-          docker compose down -v
+          cat > test-report.md << 'REPORT_EOF'
+          # Cypress Test Report
+          
+          **Run Number:** ${{ github.run_number }}
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          **Exit Code:** ${{ steps.cypress-result.outputs.exit_code }}
+          **Status:** ${{ steps.cypress-result.outputs.exit_code == '0' && '✓ Passed' || '✗ Failed' }}
+          
+          ## Screenshots
+          
+          Check the `cypress-screenshots-${{ github.run_number }}` artifact for test screenshots.
+          
+          ## Videos
+          
+          Check the `cypress-videos-${{ github.run_number }}` artifact for test videos.
+          
+          ## Service Logs
+          
+          ### WordPress (Nginx)
+          ```
+          REPORT_EOF
+          
+          docker compose logs --tail=100 wordpress-develop 2>&1 >> test-report.md || echo "No logs" >> test-report.md
+          
+          cat >> test-report.md << 'REPORT_EOF'
+          ```
+          
+          ### PHP
+          ```
+          REPORT_EOF
+          
+          docker compose logs --tail=100 php 2>&1 >> test-report.md || echo "No logs" >> test-report.md
+          
+          cat >> test-report.md << 'REPORT_EOF'
+          ```
+          
+          ### Cypress
+          ```
+          REPORT_EOF
+          
+          docker compose logs cypress 2>&1 >> test-report.md || echo "No logs" >> test-report.md
+          
+          echo '```' >> test-report.md
+          
+          echo "==== Test Report Generated ===="
+          head -50 test-report.md
+      
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ github.run_number }}
+          path: test-report.md
+          retention-days: 30
+      
+      - name: Display service logs on failure
+        if: failure()
+        run: |
+          echo "==== WordPress (Nginx) logs ===="
+          docker compose logs --tail=200 wordpress-develop
+          
+          echo "==== PHP logs ===="
+          docker compose logs --tail=200 php
+          
+          echo "==== MySQL logs ===="
+          docker compose logs --tail=100 mysql
+          
+          echo "==== Cypress logs ===="
+          docker compose logs cypress
+      
+      - name: Cleanup Docker environment
+        if: always()
+        run: |
+          echo "==== Stopping and removing containers ===="
+          docker compose down -v --remove-orphans
+          
+          echo "==== Docker cleanup complete ===="
+      
+      - name: Fail job if Cypress tests failed
+        if: always() && steps.cypress-result.outputs.exit_code != '0'
+        run: |
+          echo "❌ Cypress tests failed with exit code ${{ steps.cypress-result.outputs.exit_code }}"
+          exit 1
