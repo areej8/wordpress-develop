@@ -71,13 +71,14 @@ jobs:
       run: |
         mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_unit_test;"
         
-    - name: Run tests with coverage (like your local command)
+    - name: Run specific test group (formatting)
       run: |
-        echo "Running tests with coverage..."
-        vendor/bin/phpunit \
-          --configuration=tests/phpunit/phpunit.xml.dist \
-          --coverage-html=coverage \
-          --coverage-clover=coverage.xml
+      echo "Running formatting tests..."
+      vendor/bin/phpunit \
+      --configuration=phpunit.xml.dist \
+      --group=formatting \
+      --coverage-text
+
         
     - name: Run specific test group (formatting)
       run: |
@@ -107,7 +108,7 @@ jobs:
     - name: Run all tests
       run: |
         echo "Running all tests..."
-        vendor/bin/phpunit --configuration=tests/phpunit/phpunit.xml.dist
+        vendor/bin/phpunit --configuration=phpunit.xml.dist
         
     - name: Generate test report
       run: |
