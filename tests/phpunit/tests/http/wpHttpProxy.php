@@ -4,6 +4,7 @@
  * 
  * @group http
  * @group proxy
+ * @group image-avif
  */
 class Tests_WP_HTTP_Proxy extends WP_UnitTestCase {
     
