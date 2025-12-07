@@ -1,4 +1,4 @@
-name: WordPress CI/CD- API
+name: API-test
 
 on:
   push:
@@ -73,7 +73,7 @@ jobs:
 
       ## Run Custom API Tests
       - name: Run API Tests with Pytest
-        run: pytest api_tests/
+        run: pytest tests/api_test
         env:
           # Pass the API base URL as an environment variable to your tests
           API_BASE_URL: http://localhost:8888/wp-json/
