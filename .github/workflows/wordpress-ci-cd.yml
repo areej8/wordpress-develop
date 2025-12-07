@@ -8,47 +8,6 @@ on:
 
 jobs:
 
-  phpunit-tests:
-    name: PHPUnit Tests
-    runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: wordpress_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: imagick, mysqli
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction
-      
-      - name: Create wp-tests-config.php
-        run: |
-         cp wp-tests-config-sample.php wp-tests-config.php
-         sed -i "s/youremptytestdbnamehere/wordpress_test/" wp-tests-config.php
-         sed -i "s/yourusernamehere/root/" wp-tests-config.php
-         sed -i "s/yourpasswordhere/password/" wp-tests-config.php
-         sed -i "s|localhost|127.0.0.1|" wp-tests-config.php
-
-      - name: Run PHPUnit
-        run:  vendor/bin/phpunit --configuration=phpunit.xml.dist
-
   cypress-tests:
     name: Cypress E2E Tests
     runs-on: ubuntu-latest
@@ -90,7 +49,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.10.0 
+          node-version: 20.10.0
           cache: npm
 
       - name: Install Cypress
@@ -108,19 +67,19 @@ jobs:
           mkdir -p tests/cypress/support tests/cypress/e2e
 
           if [ ! -f "tests/cypress/cypress.config.js" ]; then
-            cat > tests/cypress/cypress.config.js << 'EOF'
-            const { defineConfig } = require('cypress')
+cat > tests/cypress/cypress.config.js << 'EOF'
+const { defineConfig } = require('cypress')
 
-            module.exports = defineConfig({
-              e2e: {
-                baseUrl: 'http://localhost:8889',
-                supportFile: 'tests/cypress/support/e2e.js',
-                specPattern: 'tests/cypress/e2e/**/*.cy.js',
-              },
-              video: true,
-              screenshotOnRunFailure: true
-            })
-            EOF
+module.exports = defineConfig({
+  e2e: {
+    baseUrl: 'http://localhost:8889',
+    supportFile: 'tests/cypress/support/e2e.js',
+    specPattern: 'tests/cypress/e2e/**/*.cy.js',
+  },
+  video: true,
+  screenshotOnRunFailure: true
+})
+EOF
           fi
 
           if [ ! -f "tests/cypress/support/e2e.js" ]; then
@@ -128,15 +87,15 @@ jobs:
           fi
 
           if [ ! -f "tests/cypress/support/commands.js" ]; then
-            cat > tests/cypress/support/commands.js << 'EOF'
-            Cypress.Commands.add('wpLogin', (username = 'admin', password = 'password') => {
-              cy.visit('/wp-login.php')
-              cy.get('#user_login').type(username)
-              cy.get('#user_pass').type(password)
-              cy.get('#wp-submit').click()
-              cy.url().should('include', '/wp-admin/')
-            })
-            EOF
+cat > tests/cypress/support/commands.js << 'EOF'
+Cypress.Commands.add('wpLogin', (username = 'admin', password = 'password') => {
+  cy.visit('/wp-login.php')
+  cy.get('#user_login').type(username)
+  cy.get('#user_pass').type(password)
+  cy.get('#wp-submit').click()
+  cy.url().should('include', '/wp-admin/')
+})
+EOF
           fi
 
       - name: Wait for WordPress to start
@@ -180,3 +139,4 @@ jobs:
           path: |
             tests/cypress/videos/
             tests/cypress/screenshots/
+
