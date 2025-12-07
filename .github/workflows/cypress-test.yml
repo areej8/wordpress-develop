@@ -7,9 +7,6 @@ on:
     branches: [ "trunk" ]
 
 jobs:
-  phpunit-tests:
-    # ... same as above
-
   cypress-docker:
     name: Cypress with Docker Compose
     runs-on: ubuntu-latest
