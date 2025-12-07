@@ -1,0 +1,21 @@
+# Dockerfile.mysql
+# MySQL container for Render.com
+
+FROM mysql:8.0
+
+# Copy initialization script
+COPY tools/local-env/mysql-init.sql /docker-entrypoint-initdb.d/
+
+# Configure MySQL for WordPress
+RUN echo '[mysqld]' > /etc/mysql/conf.d/wordpress.cnf && \
+    echo 'max_allowed_packet = 64M' >> /etc/mysql/conf.d/wordpress.cnf && \
+    echo 'innodb_buffer_pool_size = 256M' >> /etc/mysql/conf.d/wordpress.cnf && \
+    echo 'innodb_log_file_size = 64M' >> /etc/mysql/conf.d/wordpress.cnf && \
+    echo 'default_authentication_plugin = mysql_native_password' >> /etc/mysql/conf.d/wordpress.cnf
+
+# Expose MySQL port
+EXPOSE 3306
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD mysqladmin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD || exit 1

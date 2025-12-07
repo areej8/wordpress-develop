@@ -1,0 +1,728 @@
+
+
+Code Coverage Report:       
+  2025-12-06 06:09:30       
+                            
+ Summary:                   
+  Classes:  0.00% (0/349)   
+  Methods:  0.00% (0/4151)  
+  Lines:    0.00% (0/179662)
+
+Automatic_Upgrader_Skin
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 36)
+Avifinfo\Box
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 51)
+Avifinfo\Chan_Prop
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+Avifinfo\Dim_Prop
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+Avifinfo\Features
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 44)
+Avifinfo\Parser
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/258)
+Avifinfo\Prop
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+Avifinfo\Tile
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+Bulk_Plugin_Upgrader_Skin
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 23)
+Bulk_Theme_Upgrader_Skin
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 23)
+Bulk_Upgrader_Skin
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/ 68)
+Core_Upgrader
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/182)
+Custom_Background
+  Methods:   0.00% ( 0/10)   Lines:   0.00% (  0/347)
+Custom_Image_Header
+  Methods:   0.00% ( 0/33)   Lines:   0.00% (  0/770)
+File_Upload_Upgrader
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 58)
+Gettext_Translations
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 46)
+Language_Pack_Upgrader
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/221)
+Language_Pack_Upgrader_Skin
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 31)
+MO
+  Methods:   0.00% ( 0/14)   Lines:   0.00% (  0/147)
+NOOP_Translations
+  Methods:   0.00% ( 0/10)   Lines:   0.00% (  0/ 10)
+PO
+  Methods:   0.00% ( 0/17)   Lines:   0.00% (  0/248)
+POMO_CachedFileReader
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/  7)
+POMO_CachedIntFileReader
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/  3)
+POMO_FileReader
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 13)
+POMO_Reader
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/ 35)
+POMO_StringReader
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 16)
+Plugin_Installer_Skin
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/177)
+Plugin_Upgrader
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/305)
+Plugin_Upgrader_Skin
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 37)
+Plural_Forms
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/156)
+Theme_Installer_Skin
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/206)
+Theme_Upgrader
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/377)
+Theme_Upgrader_Skin
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 68)
+Translation_Entry
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 23)
+Translations
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/ 53)
+WP
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/287)
+WP_Abilities_Registry
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 85)
+WP_Ability
+  Methods:   0.00% ( 0/19)   Lines:   0.00% (  0/161)
+WP_Ability_Categories_Registry
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 61)
+WP_Ability_Category
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 39)
+WP_Admin_Bar
+  Methods:   0.00% ( 0/20)   Lines:   0.00% (  0/254)
+WP_Ajax_Response
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 64)
+WP_Ajax_Upgrader_Skin
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 28)
+WP_Application_Passwords
+  Methods:   0.00% ( 0/13)   Lines:   0.00% (  0/104)
+WP_Application_Passwords_List_Table
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/ 81)
+WP_Automatic_Updater
+  Methods:   0.00% ( 0/13)   Lines:   0.00% (  0/816)
+WP_Block
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/216)
+WP_Block_Bindings_Registry
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 95)
+WP_Block_Bindings_Source
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/  6)
+WP_Block_Cloner
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+WP_Block_Editor_Context
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  4)
+WP_Block_List
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/ 21)
+WP_Block_Metadata_Registry
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 97)
+WP_Block_Parser
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/136)
+WP_Block_Parser_Block
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  5)
+WP_Block_Parser_Frame
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  5)
+WP_Block_Pattern_Categories_Registry
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 37)
+WP_Block_Patterns_Registry
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 83)
+WP_Block_Processor
+  Methods:   0.00% ( 0/24)   Lines:   0.00% (  0/364)
+WP_Block_Styles_Registry
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 50)
+WP_Block_Supports
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 46)
+WP_Block_Template
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+WP_Block_Templates_Registry
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 85)
+WP_Block_Type
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/ 83)
+WP_Block_Type_Registry
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 64)
+WP_Classic_To_Block_Menu_Converter
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 52)
+WP_Comment
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/ 47)
+WP_Comment_Query
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/464)
+WP_Comments_List_Table
+  Methods:   0.00% ( 0/23)   Lines:   0.00% (  0/558)
+WP_Community_Events
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/160)
+WP_Customize_Background_Image_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 20)
+WP_Customize_Background_Image_Setting
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  1)
+WP_Customize_Background_Position_Control
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 70)
+WP_Customize_Code_Editor_Control
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 32)
+WP_Customize_Color_Control
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 38)
+WP_Customize_Control
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/203)
+WP_Customize_Cropped_Image_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/  7)
+WP_Customize_Custom_CSS_Setting
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 52)
+WP_Customize_Date_Time_Control
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/119)
+WP_Customize_Filter_Setting
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+WP_Customize_Header_Image_Control
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/154)
+WP_Customize_Header_Image_Setting
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 12)
+WP_Customize_Image_Control
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/  3)
+WP_Customize_Manager
+  Methods:   0.00% ( 0/117)   Lines:   0.00% (  0/2913)
+WP_Customize_Media_Control
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/137)
+WP_Customize_Nav_Menu_Auto_Add_Control
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  6)
+WP_Customize_Nav_Menu_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 21)
+WP_Customize_Nav_Menu_Item_Control
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 55)
+WP_Customize_Nav_Menu_Item_Setting
+  Methods:   0.00% ( 0/14)   Lines:   0.00% (  0/377)
+WP_Customize_Nav_Menu_Location_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 21)
+WP_Customize_Nav_Menu_Locations_Control
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 40)
+WP_Customize_Nav_Menu_Name_Control
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 14)
+WP_Customize_Nav_Menu_Section
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  3)
+WP_Customize_Nav_Menu_Setting
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/219)
+WP_Customize_Nav_Menus
+  Methods:   0.00% ( 0/30)   Lines:   0.00% (  0/835)
+WP_Customize_Nav_Menus_Panel
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 41)
+WP_Customize_New_Menu_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/  5)
+WP_Customize_New_Menu_Section
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 10)
+WP_Customize_Panel
+  Methods:   0.00% ( 0/10)   Lines:   0.00% (  0/ 78)
+WP_Customize_Partial
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 50)
+WP_Customize_Section
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/ 84)
+WP_Customize_Selective_Refresh
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/106)
+WP_Customize_Setting
+  Methods:   0.00% ( 0/26)   Lines:   0.00% (  0/219)
+WP_Customize_Sidebar_Section
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/  4)
+WP_Customize_Site_Icon_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 51)
+WP_Customize_Theme_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/191)
+WP_Customize_Themes_Panel
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 49)
+WP_Customize_Themes_Section
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 80)
+WP_Customize_Upload_Control
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  6)
+WP_Customize_Widgets
+  Methods:   0.00% ( 0/67)   Lines:   0.00% (  0/831)
+WP_Date_Query
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/385)
+WP_Debug_Data
+  Methods:   0.00% ( 0/21)   Lines:   0.00% (  0/1245)
+WP_Dependencies
+  Methods:   0.00% ( 0/14)   Lines:   0.00% (  0/145)
+WP_Duotone
+  Methods:   0.00% ( 0/38)   Lines:   0.00% (  0/380)
+WP_Embed
+  Methods:   0.00% ( 0/13)   Lines:   0.00% (  0/181)
+WP_Error
+  Methods:   0.00% ( 0/14)   Lines:   0.00% (  0/ 58)
+WP_Exception
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+WP_Fatal_Error_Handler
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 73)
+WP_Feed_Cache
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  1)
+WP_Feed_Cache_Transient
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 15)
+WP_Filesystem_Base
+  Methods:   0.00% ( 0/39)   Lines:   0.00% (  0/163)
+WP_Filesystem_Direct
+  Methods:   0.00% ( 0/27)   Lines:   0.00% (  0/169)
+WP_Filesystem_FTPext
+  Methods:   0.00% ( 0/28)   Lines:   0.00% (  0/247)
+WP_Filesystem_SSH2
+  Methods:   0.00% ( 0/30)   Lines:   0.00% (  0/222)
+WP_Filesystem_ftpsockets
+  Methods:   0.00% ( 0/27)   Lines:   0.00% (  0/189)
+WP_Font_Collection
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/124)
+WP_Font_Face
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/130)
+WP_Font_Face_Resolver
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 55)
+WP_Font_Library
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 31)
+WP_Font_Utils
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 87)
+WP_HTML_Active_Formatting_Elements
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/ 25)
+WP_HTML_Attribute_Token
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  6)
+WP_HTML_Decoder
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/165)
+WP_HTML_Doctype_Info
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/158)
+WP_HTML_Open_Elements
+  Methods:   0.00% ( 0/27)   Lines:   0.00% (  0/237)
+WP_HTML_Processor
+  Methods:   0.00% ( 0/79)   Lines:   0.00% (  0/2270)
+WP_HTML_Processor_State
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  2)
+WP_HTML_Span
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  2)
+WP_HTML_Stack_Event
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  3)
+WP_HTML_Tag_Processor
+  Methods:   0.00% ( 0/47)   Lines:   0.00% (  0/1267)
+WP_HTML_Text_Replacement
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  3)
+WP_HTML_Token
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/  8)
+WP_HTML_Unsupported_Exception
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  6)
+WP_HTTP_Fsockopen
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+WP_HTTP_IXR_Client
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 52)
+WP_HTTP_Proxy
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/ 39)
+WP_HTTP_Requests_Hooks
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/  8)
+WP_HTTP_Requests_Response
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/ 40)
+WP_HTTP_Response
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/ 13)
+WP_Hook
+  Methods:   0.00% ( 0/20)   Lines:   0.00% (  0/135)
+WP_Http
+  Methods:   0.00% ( 0/18)   Lines:   0.00% (  0/311)
+WP_Http_Cookie
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 60)
+WP_Http_Curl
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/183)
+WP_Http_Encoding
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 62)
+WP_Http_Streams
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/264)
+WP_Image_Editor
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/144)
+WP_Image_Editor_GD
+  Methods:   0.00% ( 0/17)   Lines:   0.00% (  0/229)
+WP_Image_Editor_Imagick
+  Methods:   0.00% ( 0/23)   Lines:   0.00% (  0/407)
+WP_Importer
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/102)
+WP_Interactivity_API
+  Methods:   0.00% ( 0/28)   Lines:   0.00% (  0/456)
+WP_Interactivity_API_Directives_Processor
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 80)
+WP_Internal_Pointers
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 30)
+WP_Links_List_Table
+  Methods:   0.00% ( 0/19)   Lines:   0.00% (  0/121)
+WP_List_Table
+  Methods:   0.00% ( 0/45)   Lines:   0.00% (  0/731)
+WP_List_Util
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 83)
+WP_Locale
+  Methods:   0.00% ( 0/14)   Lines:   0.00% (  0/ 98)
+WP_Locale_Switcher
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/ 57)
+WP_MS_Sites_List_Table
+  Methods:   0.00% ( 0/22)   Lines:   0.00% (  0/390)
+WP_MS_Themes_List_Table
+  Methods:   0.00% ( 0/20)   Lines:   0.00% (  0/482)
+WP_MS_Users_List_Table
+  Methods:   0.00% ( 0/20)   Lines:   0.00% (  0/213)
+WP_MatchesMapRegex
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/  9)
+WP_Media_List_Table
+  Methods:   0.00% ( 0/24)   Lines:   0.00% (  0/390)
+WP_Meta_Query
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/295)
+WP_Metadata_Lazyloader
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 41)
+WP_Nav_Menu_Widget
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 78)
+WP_Navigation_Block_Renderer
+  Methods:   0.00% ( 0/20)   Lines:   0.00% (  0/255)
+WP_Navigation_Fallback
+  Methods:   0.00% ( 0/10)   Lines:   0.00% (  0/ 92)
+WP_Network
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/141)
+WP_Network_Query
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/194)
+WP_Object_Cache
+  Methods:   0.00% ( 0/24)   Lines:   0.00% (  0/148)
+WP_PHPMailer
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 38)
+WP_Paused_Extensions_Storage
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 55)
+WP_Plugin_Dependencies
+  Methods:   0.00% ( 0/25)   Lines:   0.00% (  0/308)
+WP_Plugin_Install_List_Table
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/414)
+WP_Plugins_List_Table
+  Methods:   0.00% ( 0/22)   Lines:   0.00% (  0/813)
+WP_Post
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 55)
+WP_Post_Comments_List_Table
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 26)
+WP_Post_Type
+  Methods:   0.00% ( 0/17)   Lines:   0.00% (  0/237)
+WP_Posts_List_Table
+  Methods:   0.00% ( 0/32)   Lines:   0.00% (  0/934)
+WP_Privacy_Data_Export_Requests_List_Table
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 82)
+WP_Privacy_Data_Removal_Requests_List_Table
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 85)
+WP_Privacy_Policy_Content
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/314)
+WP_Privacy_Requests_Table
+  Methods:   0.00% ( 0/16)   Lines:   0.00% (  0/248)
+WP_Query
+  Methods:   0.00% ( 0/68)   Lines:   0.00% (  0/1932)
+WP_REST_Abilities_V1_Categories_Controller
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/146)
+WP_REST_Abilities_V1_List_Controller
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/196)
+WP_REST_Abilities_V1_Run_Controller
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/104)
+WP_REST_Application_Passwords_Controller
+  Methods:   0.00% ( 0/24)   Lines:   0.00% (  0/403)
+WP_REST_Attachments_Controller
+  Methods:   0.00% ( 0/22)   Lines:   0.00% (  0/903)
+WP_REST_Autosaves_Controller
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/200)
+WP_REST_Block_Directory_Controller
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/173)
+WP_REST_Block_Pattern_Categories_Controller
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 71)
+WP_REST_Block_Patterns_Controller
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/160)
+WP_REST_Block_Renderer_Controller
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/117)
+WP_REST_Block_Types_Controller
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/595)
+WP_REST_Blocks_Controller
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 18)
+WP_REST_Comment_Meta_Fields
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/  3)
+WP_REST_Comments_Controller
+  Methods:   0.00% ( 0/27)   Lines:   0.00% (  0/1129)
+WP_REST_Controller
+  Methods:   0.00% ( 0/27)   Lines:   0.00% (  0/216)
+WP_REST_Edit_Site_Export_Controller
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 32)
+WP_REST_Font_Collections_Controller
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/157)
+WP_REST_Font_Faces_Controller
+  Methods:   0.00% ( 0/22)   Lines:   0.00% (  0/499)
+WP_REST_Font_Families_Controller
+  Methods:   0.00% ( 0/16)   Lines:   0.00% (  0/249)
+WP_REST_Global_Styles_Controller
+  Methods:   0.00% ( 0/18)   Lines:   0.00% (  0/329)
+WP_REST_Global_Styles_Revisions_Controller
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/215)
+WP_REST_Menu_Items_Controller
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/542)
+WP_REST_Menu_Locations_Controller
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/133)
+WP_REST_Menus_Controller
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/234)
+WP_REST_Meta_Fields
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/260)
+WP_REST_Navigation_Fallback_Controller
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 69)
+WP_REST_Pattern_Directory_Controller
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/203)
+WP_REST_Plugins_Controller
+  Methods:   0.00% ( 0/26)   Lines:   0.00% (  0/501)
+WP_REST_Post_Format_Search_Handler
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 35)
+WP_REST_Post_Meta_Fields
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/  4)
+WP_REST_Post_Search_Handler
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 72)
+WP_REST_Post_Statuses_Controller
+  Methods:   0.00% ( 0/10)   Lines:   0.00% (  0/179)
+WP_REST_Post_Types_Controller
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/262)
+WP_REST_Posts_Controller
+  Methods:   0.00% ( 0/40)   Lines:   0.00% (  0/1781)
+WP_REST_Request
+  Methods:   0.00% ( 0/45)   Lines:   0.00% (  0/250)
+WP_REST_Response
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/ 52)
+WP_REST_Revisions_Controller
+  Methods:   0.00% ( 0/16)   Lines:   0.00% (  0/456)
+WP_REST_Search_Controller
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/192)
+WP_REST_Search_Handler
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/  2)
+WP_REST_Server
+  Methods:   0.00% ( 0/37)   Lines:   0.00% (  0/684)
+WP_REST_Settings_Controller
+  Methods:   0.00% ( 0/10)   Lines:   0.00% (  0/ 99)
+WP_REST_Sidebars_Controller
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/239)
+WP_REST_Site_Health_Controller
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/216)
+WP_REST_Taxonomies_Controller
+  Methods:   0.00% ( 0/10)   Lines:   0.00% (  0/248)
+WP_REST_Template_Autosaves_Controller
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/120)
+WP_REST_Template_Revisions_Controller
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/149)
+WP_REST_Templates_Controller
+  Methods:   0.00% ( 0/23)   Lines:   0.00% (  0/655)
+WP_REST_Term_Meta_Fields
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/  4)
+WP_REST_Term_Search_Handler
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 62)
+WP_REST_Terms_Controller
+  Methods:   0.00% ( 0/20)   Lines:   0.00% (  0/568)
+WP_REST_Themes_Controller
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/434)
+WP_REST_URL_Details_Controller
+  Methods:   0.00% ( 0/17)   Lines:   0.00% (  0/218)
+WP_REST_User_Meta_Fields
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/  3)
+WP_REST_Users_Controller
+  Methods:   0.00% ( 0/27)   Lines:   0.00% (  0/893)
+WP_REST_Widget_Types_Controller
+  Methods:   0.00% ( 0/18)   Lines:   0.00% (  0/341)
+WP_REST_Widgets_Controller
+  Methods:   0.00% ( 0/20)   Lines:   0.00% (  0/426)
+WP_Recovery_Mode
+  Methods:   0.00% ( 0/16)   Lines:   0.00% (  0/124)
+WP_Recovery_Mode_Cookie_Service
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 68)
+WP_Recovery_Mode_Email_Service
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/129)
+WP_Recovery_Mode_Key_Service
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 34)
+WP_Recovery_Mode_Link_Service
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 27)
+WP_Rewrite
+  Methods:   0.00% ( 0/38)   Lines:   0.00% (  0/485)
+WP_Role
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 10)
+WP_Roles
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/ 74)
+WP_Screen
+  Methods:   0.00% ( 0/32)   Lines:   0.00% (  0/441)
+WP_Script_Modules
+  Methods:   0.00% ( 0/25)   Lines:   0.00% (  0/276)
+WP_Scripts
+  Methods:   0.00% ( 0/29)   Lines:   0.00% (  0/362)
+WP_Session_Tokens
+  Methods:   0.00% ( 0/13)   Lines:   0.00% (  0/ 32)
+WP_Sidebar_Block_Editor_Control
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  1)
+WP_SimplePie_File
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 32)
+WP_SimplePie_Sanitize_KSES
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 13)
+WP_Site
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 68)
+WP_Site_Health
+  Methods:   0.00% ( 0/52)   Lines:   0.00% (  0/2118)
+WP_Site_Health_Auto_Updates
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/230)
+WP_Site_Icon
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 49)
+WP_Site_Query
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/305)
+WP_Sitemaps
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 76)
+WP_Sitemaps_Index
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 15)
+WP_Sitemaps_Posts
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 78)
+WP_Sitemaps_Provider
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 41)
+WP_Sitemaps_Registry
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 11)
+WP_Sitemaps_Renderer
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 91)
+WP_Sitemaps_Stylesheet
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 71)
+WP_Sitemaps_Taxonomies
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 55)
+WP_Sitemaps_Users
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 43)
+WP_Speculation_Rules
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/111)
+WP_Style_Engine
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/114)
+WP_Style_Engine_CSS_Declarations
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/ 34)
+WP_Style_Engine_CSS_Rule
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 36)
+WP_Style_Engine_CSS_Rules_Store
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 23)
+WP_Style_Engine_Processor
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 54)
+WP_Styles
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/140)
+WP_Tax_Query
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/217)
+WP_Taxonomy
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/174)
+WP_Term
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 43)
+WP_Term_Query
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/446)
+WP_Terms_List_Table
+  Methods:   0.00% ( 0/21)   Lines:   0.00% (  0/293)
+WP_Text_Diff_Renderer_Table
+  Methods:   0.00% ( 0/18)   Lines:   0.00% (  0/179)
+WP_Text_Diff_Renderer_inline
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/  4)
+WP_Textdomain_Registry
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/ 73)
+WP_Theme
+  Methods:   0.00% ( 0/52)   Lines:   0.00% (  0/824)
+WP_Theme_Install_List_Table
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/262)
+WP_Theme_JSON
+  Methods:   0.00% ( 0/70)   Lines:   0.00% (  0/1502)
+WP_Theme_JSON_Data
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/  6)
+WP_Theme_JSON_Resolver
+  Methods:   0.00% ( 0/22)   Lines:   0.00% (  0/327)
+WP_Theme_JSON_Schema
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 45)
+WP_Themes_List_Table
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/172)
+WP_Token_Map
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/244)
+WP_Translation_Controller
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/117)
+WP_Translation_File
+  Methods:   0.00% ( 0/12)   Lines:   0.00% (  0/ 59)
+WP_Translation_File_MO
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 97)
+WP_Translation_File_PHP
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 19)
+WP_Translations
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 32)
+WP_URL_Pattern_Prefixer
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 37)
+WP_Upgrader
+  Methods:   0.00% ( 0/17)   Lines:   0.00% (  0/396)
+WP_Upgrader_Skin
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/ 58)
+WP_User
+  Methods:   0.00% ( 0/28)   Lines:   0.00% (  0/253)
+WP_User_Meta_Session_Tokens
+  Methods:   0.00% ( 0/ 8)   Lines:   0.00% (  0/ 24)
+WP_User_Query
+  Methods:   0.00% ( 0/18)   Lines:   0.00% (  0/500)
+WP_User_Request
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 11)
+WP_Users_List_Table
+  Methods:   0.00% ( 0/14)   Lines:   0.00% (  0/286)
+WP_Widget
+  Methods:   0.00% ( 0/19)   Lines:   0.00% (  0/148)
+WP_Widget_Archives
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/124)
+WP_Widget_Area_Customize_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 15)
+WP_Widget_Block
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 85)
+WP_Widget_Calendar
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 26)
+WP_Widget_Categories
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 92)
+WP_Widget_Custom_HTML
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/128)
+WP_Widget_Factory
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/ 26)
+WP_Widget_Form_Customize_Control
+  Methods:   0.00% ( 0/ 2)   Lines:   0.00% (  0/ 23)
+WP_Widget_Links
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 88)
+WP_Widget_Media
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/159)
+WP_Widget_Media_Audio
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/111)
+WP_Widget_Media_Gallery
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/152)
+WP_Widget_Media_Image
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/274)
+WP_Widget_Media_Video
+  Methods:   0.00% ( 0/ 7)   Lines:   0.00% (  0/149)
+WP_Widget_Meta
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 44)
+WP_Widget_Pages
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 69)
+WP_Widget_RSS
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 76)
+WP_Widget_Recent_Comments
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 79)
+WP_Widget_Recent_Posts
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 73)
+WP_Widget_Search
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 23)
+WP_Widget_Tag_Cloud
+  Methods:   0.00% ( 0/ 5)   Lines:   0.00% (  0/ 86)
+WP_Widget_Text
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/216)
+WP_oEmbed
+  Methods:   0.00% ( 0/15)   Lines:   0.00% (  0/240)
+WP_oEmbed_Controller
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/114)
+Walker
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/138)
+Walker_Category
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 81)
+Walker_CategoryDropdown
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 14)
+Walker_Category_Checklist
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 34)
+Walker_Comment
+  Methods:   0.00% ( 0/ 9)   Lines:   0.00% (  0/198)
+Walker_Nav_Menu
+  Methods:   0.00% ( 0/ 6)   Lines:   0.00% (  0/ 77)
+Walker_Nav_Menu_Checklist
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 36)
+Walker_Nav_Menu_Edit
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/191)
+Walker_Page
+  Methods:   0.00% ( 0/ 4)   Lines:   0.00% (  0/ 72)
+Walker_PageDropdown
+  Methods:   0.00% ( 0/ 1)   Lines:   0.00% (  0/ 14)
+_WP_Dependency
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 12)
+_WP_Editors
+  Methods:   0.00% ( 0/18)   Lines:   0.00% (  0/943)
+_WP_List_Table_Compat
+  Methods:   0.00% ( 0/ 3)   Lines:   0.00% (  0/ 12)
+ftp
+  Methods:  ( 0/ 0)   Lines:  (  0/  0)
+ftp_base
+  Methods:   0.00% ( 0/48)   Lines:   0.00% (  0/521)
+ftp_pure
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/ 98)
+ftp_sockets
+  Methods:   0.00% ( 0/11)   Lines:   0.00% (  0/146)
+wp_xmlrpc_server
+  Methods:   0.00% ( 0/106)   Lines:   0.00% (  0/2972)
+wpdb
+  Methods:   0.00% ( 0/72)   Lines:   0.00% (  0/1148)

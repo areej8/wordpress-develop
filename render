@@ -1,0 +1,164 @@
+# render.yaml
+# Render.com Blueprint - Infrastructure as Code
+# This file defines all services for automatic deployment
+
+services:
+  # ==================================
+  # STAGING WEB SERVICE
+  # ==================================
+  - type: web
+    name: wordpress-staging
+    env: docker
+    plan: free
+    region: oregon  # Choose: oregon, frankfurt, singapore, ohio
+    branch: develop
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: ./
+    
+    # Environment Variables
+    envVars:
+      - key: WORDPRESS_DB_HOST
+        value: mysql-staging  # Internal hostname
+      
+      - key: WORDPRESS_DB_USER
+        value: wordpress
+      
+      - key: WORDPRESS_DB_PASSWORD
+        generateValue: true  # Auto-generate secure password
+      
+      - key: WORDPRESS_DB_NAME
+        value: wordpress_staging
+      
+      - key: WORDPRESS_DEBUG
+        value: "true"
+      
+      - key: WP_ENVIRONMENT_TYPE
+        value: staging
+      
+      - key: WP_ADMIN_USER
+        value: admin
+      
+      - key: WP_ADMIN_PASSWORD
+        sync: false  # Set manually in dashboard
+      
+      - key: WP_ADMIN_EMAIL
+        value: admin@example.com
+      
+      - key: WORDPRESS_CONFIG_EXTRA
+        value: |
+          define('WP_DEBUG_LOG', true);
+          define('WP_DEBUG_DISPLAY', false);
+          define('DISALLOW_FILE_EDIT', true);
+          define('AUTOMATIC_UPDATER_DISABLED', true);
+    
+    healthCheckPath: /
+    autoDeploy: true  # Auto-deploy on git push
+
+  # ==================================
+  # STAGING MYSQL SERVICE
+  # ==================================
+  - type: pserv  # Private service (internal only)
+    name: mysql-staging
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile.mysql
+    dockerContext: ./
+    
+    # Persistent disk for database
+    disk:
+      name: mysql-staging-data
+      mountPath: /var/lib/mysql
+      sizeGB: 1  # Free tier: 1GB
+    
+    envVars:
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true
+      
+      - key: MYSQL_DATABASE
+        value: wordpress_staging
+      
+      - key: MYSQL_USER
+        value: wordpress
+      
+      - key: MYSQL_PASSWORD
+        generateValue: true
+
+  # ==================================
+  # PRODUCTION WEB SERVICE
+  # ==================================
+  - type: web
+    name: wordpress-production
+    env: docker
+    plan: free
+    region: oregon
+    branch: trunk  # or main
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: ./
+    
+    envVars:
+      - key: WORDPRESS_DB_HOST
+        value: mysql-production
+      
+      - key: WORDPRESS_DB_USER
+        value: wordpress
+      
+      - key: WORDPRESS_DB_PASSWORD
+        generateValue: true
+      
+      - key: WORDPRESS_DB_NAME
+        value: wordpress_production
+      
+      - key: WORDPRESS_DEBUG
+        value: "false"
+      
+      - key: WP_ENVIRONMENT_TYPE
+        value: production
+      
+      - key: WP_ADMIN_USER
+        sync: false
+      
+      - key: WP_ADMIN_PASSWORD
+        sync: false
+      
+      - key: WP_ADMIN_EMAIL
+        sync: false
+      
+      - key: WORDPRESS_CONFIG_EXTRA
+        value: |
+          define('WP_DEBUG', false);
+          define('DISALLOW_FILE_EDIT', true);
+          define('AUTOMATIC_UPDATER_DISABLED', true);
+          define('WP_POST_REVISIONS', 5);
+    
+    healthCheckPath: /
+    autoDeploy: false  # Manual deployment for production
+
+  # ==================================
+  # PRODUCTION MYSQL SERVICE
+  # ==================================
+  - type: pserv
+    name: mysql-production
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile.mysql
+    dockerContext: ./
+    
+    disk:
+      name: mysql-production-data
+      mountPath: /var/lib/mysql
+      sizeGB: 1
+    
+    envVars:
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true
+      
+      - key: MYSQL_DATABASE
+        value: wordpress_production
+      
+      - key: MYSQL_USER
+        value: wordpress
+      
+      - key: MYSQL_PASSWORD
+        generateValue: true
