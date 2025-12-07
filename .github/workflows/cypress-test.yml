@@ -58,50 +58,82 @@ jobs:
       
       - name: Add Cypress service to docker-compose
         run: |
-          cat >> docker-compose.yml << 'EOF'
+          # Find where the services section ends
+          services_end=$(awk '/^networks:/ {print NR; exit}' docker-compose.yml)
           
-            ##
-            # The Cypress container for E2E testing.
-            ##
-            cypress:
-              image: cypress/included:13.6.0
-              networks:
-                - wpdevnet
-              working_dir: /e2e
-              volumes:
-                - ./tests/cypress:/e2e
-              environment:
-                CYPRESS_baseUrl: http://wordpress-develop
-                CYPRESS_WP_USERNAME: admin
-                CYPRESS_WP_PASSWORD: password
-                CYPRESS_VIDEO: ${CYPRESS_VIDEO-true}
-                CYPRESS_SCREENSHOT_ON_RUN_FAILURE: ${CYPRESS_SCREENSHOT_ON_RUN_FAILURE-true}
-              entrypoint: ""
-              command: |
-                sh -c "
-                echo '==== Waiting for WordPress to be ready ===='
-                max_attempts=60
-                attempt=0
-                until wget --spider -q http://wordpress-develop 2>/dev/null || [ \$$attempt -eq \$$max_attempts ]; do
-                  echo \"Attempt \$$((attempt+1))/\$$max_attempts: WordPress not ready yet...\"
-                  sleep 3
-                  attempt=\$$((attempt+1))
-                done
-                
-                if [ \$$attempt -eq \$$max_attempts ]; then
-                  echo 'ERROR: WordPress did not become ready in time'
-                  exit 1
-                fi
-                
-                echo '==== WordPress is ready! Running Cypress tests ===='
-                npx cypress run --browser electron --headless
-                "
-              depends_on:
-                wordpress-develop:
-                  condition: service_started
-                mysql:
-                  condition: service_healthy
-          EOF
+          if [ -z "$services_end" ]; then
+            # If no networks section, find volumes
+            services_end=$(awk '/^volumes:/ {print NR; exit}' docker-compose.yml)
+          fi
+          
+          echo "Inserting Cypress service before line: $services_end"
+          
+          # Create temp files
+          head -n $((services_end - 1)) docker-compose.yml > docker-compose-part1.yml
+          tail -n +$services_end docker-compose.yml > docker-compose-part2.yml
+          
+          # Create Cypress service configuration
+          cat > cypress-service.yml << 'EOF'
+  ##
+  # The Cypress container for E2E testing.
+  ##
+  cypress:
+    image: cypress/included:13.6.0
+    networks:
+      - wpdevnet
+    working_dir: /e2e
+    volumes:
+      - ./tests/cypress:/e2e
+    environment:
+      CYPRESS_baseUrl: http://wordpress-develop
+      CYPRESS_WP_USERNAME: admin
+      CYPRESS_WP_PASSWORD: password
+      CYPRESS_VIDEO: ${CYPRESS_VIDEO-true}
+      CYPRESS_SCREENSHOT_ON_RUN_FAILURE: ${CYPRESS_SCREENSHOT_ON_RUN_FAILURE-true}
+    entrypoint: ""
+    command: |
+      sh -c "
+      echo '==== Waiting for WordPress to be ready ===='
+      max_attempts=60
+      attempt=0
+      until wget --spider -q http://wordpress-develop 2>/dev/null || [ \$$attempt -eq \$$max_attempts ]; do
+        echo \"Attempt \$$((attempt+1))/\$$max_attempts: WordPress not ready yet...\"
+        sleep 3
+        attempt=\$$((attempt+1))
+      done
+      
+      if [ \$$attempt -eq \$$max_attempts ]; then
+        echo 'ERROR: WordPress did not become ready in time'
+        exit 1
+      fi
+      
+      echo '==== WordPress is ready! Running Cypress tests ===='
+      npx cypress run --browser electron --headless
+      "
+    depends_on:
+      wordpress-develop:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+EOF
+          
+          # Combine all parts
+          cat docker-compose-part1.yml cypress-service.yml docker-compose-part2.yml > docker-compose.yml
+          
+          # Cleanup temp files
+          rm -f docker-compose-part1.yml docker-compose-part2.yml cypress-service.yml
+          
+          echo "==== Verifying docker-compose.yml structure ===="
+          echo "Last 10 lines of services section:"
+          head -n $((services_end + 45)) docker-compose.yml | tail -20
+          
+          echo ""
+          echo "Networks section:"
+          tail -20 docker-compose.yml
+          
+          echo ""
+          echo "==== Validating docker-compose.yml ===="
+          docker compose config --quiet && echo "✓ docker-compose.yml is valid" || { echo "✗ docker-compose.yml is invalid"; exit 1; }
       
       - name: Start Docker Compose services
         run: |
