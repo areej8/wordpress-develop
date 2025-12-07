@@ -1,0 +1,664 @@
+# .github/workflows/complete-cicd-pipeline.yml
+# Complete CI/CD Pipeline: GitHub → Build → Test → Staging (Render) → Production (Render)
+# 100% FREE - No Credit Card Required
+
+name: Complete WordPress CI/CD Pipeline
+
+on:
+  push:
+    branches: [ trunk, main, develop ]
+  pull_request:
+    branches: [ trunk, main, develop ]
+  workflow_dispatch:
+
+env:
+  LOCAL_DIR: src
+  LOCAL_PHP: '8.2'
+  LOCAL_DB_TYPE: mysql
+  LOCAL_DB_VERSION: '8.0'
+  COMPOSE_INTERACTIVE_NO_CLI: 1
+
+jobs:
+  # ==========================================
+  # STAGE 1: SOURCE (Repository Checkout)
+  # Tool: GitHub
+  # ==========================================
+  source:
+    name: Stage 1 - Source Code Checkout
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 📊 Display Repository Info
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+      
+      - name: ✅ Source Stage Complete
+        run: echo "Source code successfully checked out"
+
+  # ==========================================
+  # STAGE 2: BUILD (Compilation & Artifacts)
+  # Tools: Docker, NPM, Composer
+  # ==========================================
+  build:
+    name: Stage 2 - Build & Create Artifacts
+    runs-on: ubuntu-latest
+    needs: source
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 📦 Cache Docker Layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      
+      - name: 🔨 Pull Docker Images
+        run: |
+          echo "Pulling required Docker images..."
+          docker-compose pull
+      
+      - name: 🏗️ Build Docker Containers
+        run: |
+          echo "Building Docker containers..."
+          docker-compose build --parallel
+          docker-compose images
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📥 Install NPM Dependencies
+        run: |
+          echo "Installing Node.js dependencies..."
+          npm ci
+      
+      - name: 🔨 Build WordPress Assets
+        run: |
+          echo "Building WordPress assets..."
+          npm run build
+          ls -la build/
+      
+      - name: 📦 Install Composer Dependencies
+        run: |
+          echo "Installing PHP dependencies..."
+          docker-compose run --rm cli composer install --no-dev --optimize-autoloader
+      
+      - name: 📦 Create Build Artifacts
+        run: |
+          echo "Creating deployment artifacts..."
+          mkdir -p artifacts
+          
+          # Create tarball with all necessary files
+          tar -czf artifacts/wordpress-build-${{ github.sha }}.tar.gz \
+            --exclude=node_modules \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=tests/phpunit \
+            --exclude=docker-compose.yml \
+            src/ build/ tools/
+          
+          ls -lh artifacts/
+      
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wordpress-artifacts-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+      
+      - name: ✅ Build Stage Complete
+        run: |
+          echo "Build artifacts created successfully"
+          echo "Artifact: wordpress-build-${{ github.sha }}.tar.gz"
+
+  # ==========================================
+  # STAGE 3: TEST - PHPUNIT
+  # Tool: PHPUnit
+  # ==========================================
+  test-phpunit:
+    name: Stage 3.1 - PHPUnit Backend Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.0', '8.1', '8.2']
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🚀 Start Docker Environment
+        env:
+          LOCAL_PHP: ${{ matrix.php }}
+        run: |
+          echo "Starting WordPress environment with PHP ${{ matrix.php }}..."
+          docker-compose up -d
+          docker-compose ps
+      
+      - name: ⏳ Wait for MySQL to be Ready
+        run: |
+          echo "Waiting for MySQL..."
+          timeout 120 bash -c 'until docker-compose exec -T mysql mysqladmin ping -h localhost -ppassword --silent; do sleep 2; done'
+          echo "MySQL is ready!"
+      
+      - name: 🔧 Install WordPress Test Suite
+        run: |
+          echo "Installing WordPress test environment..."
+          docker-compose exec -T cli bash -c "
+            cd /var/www &&
+            bash bin/install-wp-tests.sh wordpress_test root password mysql latest true
+          "
+      
+      - name: 🧪 Run PHPUnit Tests
+        run: |
+          echo "Running PHPUnit tests..."
+          docker-compose exec -T cli vendor/bin/phpunit \
+            --verbose \
+            --colors=always \
+            --configuration phpunit.xml.dist
+      
+      - name: 📊 Generate Coverage Report
+        if: matrix.php == '8.2'
+        run: |
+          docker-compose exec -T cli vendor/bin/phpunit \
+            --coverage-html coverage-report \
+            --coverage-clover coverage.xml
+      
+      - name: 📤 Upload Coverage
+        if: matrix.php == '8.2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-coverage-php-${{ matrix.php }}
+          path: |
+            coverage-report/
+            coverage.xml
+      
+      - name: 🧹 Cleanup
+        if: always()
+        run: docker-compose down -v
+      
+      - name: ✅ PHPUnit Tests Complete
+        run: echo "PHPUnit tests passed for PHP ${{ matrix.php }}"
+
+  # ==========================================
+  # STAGE 3: TEST - PYTEST (API)
+  # Tool: Pytest
+  # ==========================================
+  test-pytest:
+    name: Stage 3.2 - Pytest API Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install Python Dependencies
+        run: |
+          echo "Installing Python test dependencies..."
+          pip install pytest pytest-cov requests pytest-html pytest-json-report pillow
+      
+      - name: 🚀 Start WordPress Environment
+        run: |
+          echo "Starting WordPress for API testing..."
+          docker-compose up -d
+          docker-compose ps
+      
+      - name: ⏳ Wait for WordPress
+        run: |
+          echo "Waiting for WordPress to be ready..."
+          timeout 180 bash -c 'until curl -sf http://localhost:8889 > /dev/null; do sleep 3; done'
+          echo "WordPress is ready!"
+      
+      - name: 🔧 Install WordPress
+        run: |
+          echo "Installing WordPress..."
+          docker-compose exec -T cli wp core install \
+            --url=http://localhost:8889 \
+            --title="WordPress API Tests" \
+            --admin_user=admin \
+            --admin_password=admin \
+            --admin_email=admin@example.com \
+            --skip-email
+          
+          # Enable pretty permalinks for REST API
+          docker-compose exec -T cli wp rewrite structure '/%postname%/'
+          docker-compose exec -T cli wp rewrite flush
+      
+      - name: 🧪 Run Pytest API Tests
+        run: |
+          echo "Running API tests..."
+          pytest tests/api/ \
+            -v \
+            --cov=. \
+            --cov-report=xml \
+            --cov-report=html \
+            --html=pytest-report.html \
+            --json-report \
+            --json-report-file=pytest-report.json
+      
+      - name: 📤 Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-reports
+          path: |
+            htmlcov/
+            pytest-report.html
+            pytest-report.json
+            coverage.xml
+      
+      - name: 🧹 Cleanup
+        if: always()
+        run: docker-compose down -v
+      
+      - name: ✅ API Tests Complete
+        run: echo "Pytest API tests passed successfully"
+
+  # ==========================================
+  # STAGE 3: TEST - CYPRESS (UI)
+  # Tool: Cypress
+  # ==========================================
+  test-cypress:
+    name: Stage 3.3 - Cypress UI Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 📥 Install Dependencies
+        run: |
+          echo "Installing Cypress and dependencies..."
+          npm ci
+      
+      - name: 🚀 Start WordPress Environment
+        run: |
+          echo "Starting WordPress for UI testing..."
+          docker-compose up -d
+          docker-compose ps
+      
+      - name: ⏳ Wait for WordPress
+        run: |
+          echo "Waiting for WordPress..."
+          timeout 180 bash -c 'until curl -sf http://localhost:8889 > /dev/null; do sleep 3; done'
+          echo "WordPress is ready!"
+      
+      - name: 🔧 Install WordPress
+        run: |
+          echo "Setting up WordPress..."
+          docker-compose exec -T cli wp core install \
+            --url=http://localhost:8889 \
+            --title="Cypress UI Tests" \
+            --admin_user=admin \
+            --admin_password=admin \
+            --admin_email=admin@example.com \
+            --skip-email
+          
+          docker-compose exec -T cli wp rewrite structure '/%postname%/'
+          docker-compose exec -T cli wp theme activate twentytwentyfour
+      
+      - name: 🧪 Run Cypress Tests
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          headed: false
+          record: false
+          config: baseUrl=http://localhost:8889
+        env:
+          CYPRESS_ADMIN_USER: admin
+          CYPRESS_ADMIN_PASS: admin
+      
+      - name: 📤 Upload Screenshots on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+      
+      - name: 📤 Upload Videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: cypress/videos
+      
+      - name: 🧹 Cleanup
+        if: always()
+        run: docker-compose down -v
+      
+      - name: ✅ UI Tests Complete
+        run: echo "Cypress UI tests passed successfully"
+
+  # ==========================================
+  # STAGE 4: STAGING DEPLOYMENT (Render.com)
+  # Tool: Render.com Deploy Hooks
+  # ==========================================
+  deploy-staging:
+    name: Stage 4 - Deploy to Staging (Render.com)
+    runs-on: ubuntu-latest
+    needs: [test-phpunit, test-pytest, test-cypress]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: ${{ secrets.RENDER_STAGING_URL }}
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wordpress-artifacts-${{ github.sha }}
+          path: ./artifacts
+      
+      - name: 📊 Verify Artifacts
+        run: |
+          echo "Verifying build artifacts..."
+          ls -lh artifacts/
+          tar -tzf artifacts/wordpress-build-${{ github.sha }}.tar.gz | head -20
+      
+      - name: 🚀 Trigger Render.com Staging Deployment
+        run: |
+          echo "🚀 Deploying to Render.com Staging..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}")
+          
+          if [ $response -eq 200 ] || [ $response -eq 201 ]; then
+            echo "✅ Staging deployment triggered successfully (HTTP $response)"
+          else
+            echo "❌ Deployment trigger failed (HTTP $response)"
+            exit 1
+          fi
+      
+      - name: ⏳ Wait for Deployment (90 seconds)
+        run: |
+          echo "⏳ Waiting for Render to build and deploy..."
+          for i in {1..18}; do
+            echo "Waiting... $((i*5)) seconds elapsed"
+            sleep 5
+          done
+      
+      - name: 🏥 Health Check - Homepage
+        run: |
+          echo "🏥 Checking staging homepage..."
+          for attempt in {1..10}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_STAGING_URL }}" || echo "000")
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ Homepage is healthy (HTTP 200)"
+              exit 0
+            fi
+            
+            echo "Attempt $attempt/10: HTTP $response - Retrying in 10 seconds..."
+            sleep 10
+          done
+          
+          echo "❌ Health check failed after 10 attempts"
+          exit 1
+      
+      - name: 🏥 Health Check - REST API
+        run: |
+          echo "🏥 Checking REST API..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_STAGING_URL }}/wp-json/")
+          
+          if [ $response -eq 200 ]; then
+            echo "✅ REST API is healthy"
+          else
+            echo "⚠️  REST API returned HTTP $response"
+          fi
+      
+      - name: 🏥 Health Check - Admin Panel
+        run: |
+          echo "🏥 Checking admin panel..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_STAGING_URL }}/wp-admin/")
+          
+          if [ $response -eq 200 ] || [ $response -eq 302 ]; then
+            echo "✅ Admin panel is accessible"
+          else
+            echo "⚠️  Admin panel returned HTTP $response"
+          fi
+      
+      - name: 🧪 Run Smoke Tests
+        run: |
+          echo "🧪 Running smoke tests on staging..."
+          npm install axios colors
+          STAGING_URL="${{ secrets.RENDER_STAGING_URL }}" node tests/smoke/smoke-tests.js --env=staging
+      
+      - name: 📊 Deployment Summary
+        run: |
+          echo "════════════════════════════════════"
+          echo "🎉 STAGING DEPLOYMENT SUCCESSFUL"
+          echo "════════════════════════════════════"
+          echo "Environment: Staging"
+          echo "Platform: Render.com"
+          echo "URL: ${{ secrets.RENDER_STAGING_URL }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "════════════════════════════════════"
+      
+      - name: ✅ Staging Deployment Complete
+        run: echo "Staging deployment completed successfully"
+
+  # ==========================================
+  # STAGE 5: PRODUCTION DEPLOYMENT (Render.com)
+  # Tool: Render.com Deploy Hooks
+  # ==========================================
+  deploy-production:
+    name: Stage 5 - Deploy to Production (Render.com)
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: (github.ref == 'refs/heads/trunk' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    environment:
+      name: production
+      url: ${{ secrets.RENDER_PRODUCTION_URL }}
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: wordpress-artifacts-${{ github.sha }}
+          path: ./artifacts
+      
+      - name: ⏸️  Manual Approval Required
+        run: |
+          echo "⏸️  This step requires manual approval in GitHub Actions UI"
+          echo "Please review staging deployment before proceeding"
+      
+      - name: 🚀 Trigger Render.com Production Deployment
+        run: |
+          echo "🚀 Deploying to Render.com Production..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK_PRODUCTION }}")
+          
+          if [ $response -eq 200 ] || [ $response -eq 201 ]; then
+            echo "✅ Production deployment triggered (HTTP $response)"
+          else
+            echo "❌ Deployment trigger failed (HTTP $response)"
+            exit 1
+          fi
+      
+      - name: ⏳ Wait for Deployment (120 seconds)
+        run: |
+          echo "⏳ Waiting for production deployment..."
+          for i in {1..24}; do
+            echo "Waiting... $((i*5)) seconds elapsed"
+            sleep 5
+          done
+      
+      - name: 🏥 Production Health Checks
+        run: |
+          echo "🏥 Running production health checks..."
+          
+          # Check homepage
+          for attempt in {1..15}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_PRODUCTION_URL }}" || echo "000")
+            
+            if [ "$response" = "200" ]; then
+              echo "✅ Homepage: HTTP 200"
+              break
+            fi
+            
+            if [ $attempt -eq 15 ]; then
+              echo "❌ Homepage health check failed"
+              exit 1
+            fi
+            
+            echo "Attempt $attempt/15: HTTP $response - Retrying..."
+            sleep 10
+          done
+          
+          # Check API
+          api_response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_PRODUCTION_URL }}/wp-json/")
+          echo "✅ REST API: HTTP $api_response"
+          
+          # Check admin
+          admin_response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_PRODUCTION_URL }}/wp-admin/")
+          echo "✅ Admin Panel: HTTP $admin_response"
+      
+      - name: ⚡ Performance Check
+        run: |
+          echo "⚡ Checking response time..."
+          
+          total_time=0
+          for i in {1..5}; do
+            start=$(date +%s%N)
+            curl -s "${{ secrets.RENDER_PRODUCTION_URL }}" > /dev/null
+            end=$(date +%s%N)
+            duration=$(( ($end - $start) / 1000000 ))
+            total_time=$((total_time + duration))
+            echo "Request $i: ${duration}ms"
+          done
+          
+          avg_time=$((total_time / 5))
+          echo "Average response time: ${avg_time}ms"
+          
+          if [ $avg_time -gt 3000 ]; then
+            echo "⚠️  Warning: Average response time exceeds 3 seconds"
+          else
+            echo "✅ Performance is acceptable"
+          fi
+      
+      - name: 🧪 Run Production Smoke Tests
+        run: |
+          echo "🧪 Running production smoke tests..."
+          npm install axios colors
+          PRODUCTION_URL="${{ secrets.RENDER_PRODUCTION_URL }}" node tests/smoke/smoke-tests.js --env=production
+      
+      - name: 📝 Create Deployment Record
+        run: |
+          echo "📝 Recording deployment..."
+          cat > deployment-record.json <<EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "actor": "${{ github.actor }}",
+            "environment": "production",
+            "platform": "render.com",
+            "url": "${{ secrets.RENDER_PRODUCTION_URL }}",
+            "workflow_run": "${{ github.run_number }}"
+          }
+          EOF
+          
+          cat deployment-record.json
+      
+      - name: 📤 Upload Deployment Record
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-record-${{ github.sha }}
+          path: deployment-record.json
+      
+      - name: 📊 Production Deployment Summary
+        run: |
+          echo "════════════════════════════════════════"
+          echo "🎉 PRODUCTION DEPLOYMENT SUCCESSFUL 🎉"
+          echo "════════════════════════════════════════"
+          echo "Environment: Production"
+          echo "Platform: Render.com (FREE)"
+          echo "URL: ${{ secrets.RENDER_PRODUCTION_URL }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Workflow Run: #${{ github.run_number }}"
+          echo "Timestamp: $(date -u)"
+          echo "════════════════════════════════════════"
+      
+      - name: ✅ Production Deployment Complete
+        run: echo "Production deployment completed successfully"
+
+  # ==========================================
+  # MONITORING & VALIDATION
+  # ==========================================
+  post-deployment-monitoring:
+    name: Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: (github.ref == 'refs/heads/trunk' || github.ref == 'refs/heads/main') && github.event_name == 'push'
+    
+    steps:
+      - name: 📊 Monitor Production (5 minutes)
+        run: |
+          echo "🔍 Monitoring production for 5 minutes..."
+          
+          for i in {1..10}; do
+            timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+            response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_PRODUCTION_URL }}")
+            
+            if [ $response -eq 200 ]; then
+              echo "[$timestamp] ✅ Status: HTTP $response"
+            else
+              echo "[$timestamp] ⚠️  Status: HTTP $response"
+            fi
+            
+            sleep 30
+          done
+      
+      - name: 📈 Final Health Report
+        run: |
+          echo "════════════════════════════════════"
+          echo "📈 FINAL HEALTH REPORT"
+          echo "════════════════════════════════════"
+          echo "Homepage: $(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_PRODUCTION_URL }}")"
+          echo "REST API: $(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_PRODUCTION_URL }}/wp-json/")"
+          echo "Admin: $(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_PRODUCTION_URL }}/wp-admin/")"
+          echo "════════════════════════════════════"
+      
+      - name: ✅ Monitoring Complete
+        run: echo "Post-deployment monitoring completed"
