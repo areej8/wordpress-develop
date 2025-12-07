@@ -56,6 +56,14 @@ jobs:
         mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_test;"
         mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_test_tmp;"
 
+    - name: Create wp-tests-config.php
+      run: |
+        cp wp-tests-config-sample.php wp-tests-config.php
+        sed -i "s/youremptytestdbnamehere/wordpress_test/" wp-tests-config.php
+        sed -i "s/yourusernamehere/root/" wp-tests-config.php
+        sed -i "s/yourpasswordhere/password/" wp-tests-config.php
+        sed -i "s|localhost|127.0.0.1|" wp-tests-config.php
+
     - name: Run all unit tests
       run: |
         echo "🧪 Running all WordPress core unit tests..."
@@ -69,3 +77,4 @@ jobs:
         path: |
           phpunit.xml.dist
         retention-days: 7
+
