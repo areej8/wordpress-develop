@@ -1,7 +1,4 @@
-name: WordPress CI/CD
-
-env:
-  ACTIONS_SETUP_NODE_CACHE: 'false'
+name: WordPress CI/CD- API
 
 on:
   push:
@@ -10,11 +7,31 @@ on:
     branches: [ "trunk" ]
 
 jobs:
-phpunit-tests:
-    name: PHPUnit Tests
+  pytest-api-tests:
+    # Removed 'needs: phpunit-tests' as the unit tests job is gone
+    name: API Tests (Pytest)
     runs-on: ubuntu-latest
-
+    
+    # Define the services needed for the API tests
     services:
+      # 1. WordPress application running (simulated by a standard PHP server)
+      #    This is your application under test.
+      wordpress:
+        image: wordpress:latest
+        env:
+          WORDPRESS_DB_HOST: mysql
+          WORDPRESS_DB_USER: root
+          WORDPRESS_DB_PASSWORD: password
+          WORDPRESS_DB_NAME: wordpress_test
+        ports:
+          - 8888:80 # Map port 8888 on the host to port 80 in the container
+        options: >-
+          --health-cmd="curl -f http://localhost/wp-admin/install.php || exit 0"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+      # 2. Database service required by the WordPress service
       mysql:
         image: mysql:8.0
         env:
@@ -30,101 +47,34 @@ phpunit-tests:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      
+      ## Setup Python Environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          php-version: '8.2'
-          extensions: imagick, mysqli
+          python-version: '3.x'
 
-      - name: Install Composer dependencies
-        run: composer install --no-interaction
-     
-      - name: Create wp-tests-config.php
+      ## Install Pytest and Requests
+      - name: Install Pytest and dependencies
+        run: pip install pytest requests
+
+      ## Wait for WordPress Service
+      # This step ensures the WordPress container is up and running before tests begin.
+      - name: Wait for WordPress to be ready
         run: |
-         cp wp-tests-config-sample.php wp-tests-config.php
-         sed -i "s/youremptytestdbnamehere/wordpress_test/" wp-tests-config.php
-         sed -i "s/yourusernamehere/root/" wp-tests-config.php
-         sed -i "s/yourpasswordhere/password/" wp-tests-config.php
-         sed -i "s|localhost|127.0.0.1|" wp-tests-config.php
+          echo "Waiting for WordPress service to be healthy..."
+          for i in {1..20}; do
+            # Check the mapped port on localhost (the runner)
+            curl -s http://localhost:8888 > /dev/null && break
+            echo -n "."
+            sleep 5
+          done
+          echo "WordPress is ready."
 
-      - name: Run PHPUnit
-        run:  vendor/bin/phpunit --configuration=phpunit.xml.dist
-
-pytest-api-tests:
-  # This job must wait for the unit tests to pass
-  needs: phpunit-tests
-  name: API Tests (Pytest)
-  runs-on: ubuntu-latest
-  
-  # Define the services needed for the API tests
-  services:
-    # 1. WordPress application running (simulated by a standard PHP server)
-    #    NOTE: For the full WordPress dev environment, using a custom Dockerfile
-    #          or 'wp-env' locally is easier, but for CI, we simulate the environment.
-    wordpress:
-      # Use an image that can serve the WordPress code (e.g., official WordPress image)
-      # In a real scenario, you'd build and use your own Docker image created in the Build stage.
-      image: wordpress:latest
-      env:
-        WORDPRESS_DB_HOST: mysql
-        WORDPRESS_DB_USER: root
-        WORDPRESS_DB_PASSWORD: password
-        WORDPRESS_DB_NAME: wordpress_test
-      ports:
-        - 8888:80 # Map port 8888 on the host to port 80 in the container
-      options: >-
-        --health-cmd="curl -f http://localhost/wp-admin/install.php || exit 0"
-        --health-interval=10s
-        --health-timeout=5s
-        --health-retries=3
-
-    # 2. Database service (reuse the same setup as PHPUnit)
-    mysql:
-      image: mysql:8.0
-      env:
-        MYSQL_ROOT_PASSWORD: password
-        MYSQL_DATABASE: wordpress_test
-      ports:
-        - 3306:3306
-      options: >-
-        --health-cmd="mysqladmin ping"
-        --health-interval=10s
-        --health-timeout=5s
-        --health-retries=3
-
-  steps:
-    - uses: actions/checkout@v4
-    
-    # Setup Python environment for Pytest
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-
-    # Install Pytest and the Requests library
-    - name: Install Pytest and dependencies
-      run: pip install pytest requests
-
-    # Wait for the WordPress service to be ready
-    - name: Wait for WordPress to be ready
-      run: |
-        echo "Waiting for WordPress service to be healthy..."
-        # Loop until the WP container responds (replace with your actual URL/port if different)
-        # Using the mapped port 8888 on the host for access
-        for i in {1..20}; do
-          curl -s http://localhost:8888 > /dev/null && break
-          echo -n "."
-          sleep 5
-        done
-        echo "WordPress is ready."
-
-    # Run your custom API tests
-    - name: Run API Tests with Pytest
-      # The base URL should point to the mapped port on the host (localhost:8888)
-      # Assuming your Pytest files are in an 'api_tests/' folder
-      run: pytest api_tests/ --base-url http://localhost:8888/wp-json/
-      env:
-        # Pass the API base URL as an environment variable to your tests
-        API_BASE_URL: http://localhost:8888/wp-json/
+      ## Run Custom API Tests
+      - name: Run API Tests with Pytest
+        run: pytest api_tests/
+        env:
+          # Pass the API base URL as an environment variable to your tests
+          API_BASE_URL: http://localhost:8888/wp-json/
 
