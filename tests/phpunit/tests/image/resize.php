@@ -4,6 +4,7 @@
  * Base class for testing image resize functionality.
  * @group image-avif
  */
+
 require_once __DIR__ . '/base.php';
 
 abstract class WP_Tests_Image_Resize_UnitTestCase extends WP_Image_UnitTestCase {
@@ -85,14 +86,8 @@ abstract class WP_Tests_Image_Resize_UnitTestCase extends WP_Image_UnitTestCase 
 	}
 
 	/**
-	 * Test resizing AVIF image.
-	 *
-	 * @ticket 51228
-	 *
-	 * Temporarily disabled until we can figure out why it fails on the Trixie based PHP container.
-	 * See https://core.trac.wordpress.org/ticket/63932.
-	 * @requires PHP < 8.3
-	 */
+	 * @group image-avif
+ 	 */
 	public function test_resize_avif() {
 		$file   = DIR_TESTDATA . '/images/avif-lossy.avif';
 		$editor = wp_get_image_editor( $file );
