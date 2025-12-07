@@ -56,35 +56,10 @@ jobs:
           mkdir -p tests/cypress/videos
           chmod -R 777 tests/cypress
       
-      - name: Validate existing docker-compose.yml
+      - name: Create Cypress override compose file
         run: |
-          echo "==== Checking existing docker-compose.yml ===="
-          if [ ! -f docker-compose.yml ]; then
-            echo "ERROR: docker-compose.yml not found"
-            exit 1
-          fi
-          
-          echo "Original docker-compose.yml structure:"
-          head -50 docker-compose.yml
-      
-      - name: Add Cypress service to docker-compose
-        run: |
-          # Create a backup first
-          cp docker-compose.yml docker-compose.yml.backup
-          
-          # Check if docker-compose.yml already has cypress service
-          if grep -q "^  cypress:" docker-compose.yml; then
-            echo "Cypress service already exists in docker-compose.yml"
-            exit 0
-          fi
-          
-          # Create modified docker-compose.yml with Cypress service
           cat > docker-compose.cypress.yml << 'EOF'
-          version: '3.8'
-          
           services:
-            # ... existing services will be inserted here
-          
             ##
             # The Cypress container for E2E testing.
             ##
@@ -109,13 +84,13 @@ jobs:
                   echo '==== Waiting for WordPress to be ready ===='
                   max_attempts=60
                   attempt=0
-                  until wget --spider -q http://wordpress-develop 2>/dev/null || [ $attempt -eq $max_attempts ]; do
-                    echo "Attempt $((attempt+1))/$max_attempts: WordPress not ready yet..."
+                  until wget --spider -q http://wordpress-develop 2>/dev/null || [ $$attempt -eq $$max_attempts ]; do
+                    echo "Attempt $$((attempt+1))/$$max_attempts: WordPress not ready yet..."
                     sleep 3
-                    attempt=$((attempt+1))
+                    attempt=$$((attempt+1))
                   done
                   
-                  if [ $attempt -eq $max_attempts ]; then
+                  if [ $$attempt -eq $$max_attempts ]; then
                     echo 'ERROR: WordPress did not become ready in time'
                     exit 1
                   fi
@@ -127,61 +102,27 @@ jobs:
                   condition: service_started
                 mysql:
                   condition: service_healthy
-          
-          networks:
-            wpdevnet:
-              external: true
-          
-          volumes:
-            mysql_data: {}
           EOF
           
-          # Extract existing services (everything between 'services:' and 'networks:' or 'volumes:')
-          awk '
-            /^services:/ {in_services=1}
-            /^networks:/ {if(in_services) in_services=0}
-            /^volumes:/ {if(in_services) in_services=0}
-            in_services && !/^services:/ {print}
-          ' docker-compose.yml > existing-services.yml
+          echo "==== Created docker-compose.cypress.yml ===="
+          cat docker-compose.cypress.yml
           
-          # Combine: start + existing services + cypress service + end
-          echo "version: '3.8'" > docker-compose.yml.new
-          echo "" >> docker-compose.yml.new
-          echo "services:" >> docker-compose.yml.new
-          cat existing-services.yml >> docker-compose.yml.new
-          
-          # Add cypress service from the template
-          awk '
-            /^  cypress:/ {in_cypress=1}
-            in_cypress {print}
-            /^networks:/ {if(in_cypress) in_cypress=0}
-          ' docker-compose.cypress.yml >> docker-compose.yml.new
-          
-          # Add networks and volumes sections
-          awk '
-            /^networks:/ {in_networks=1}
-            /^volumes:/ {in_volumes=1; in_networks=0}
-            in_networks || in_volumes {print}
-          ' docker-compose.cypress.yml >> docker-compose.yml.new
-          
-          mv docker-compose.yml.new docker-compose.yml
-          
-          echo "==== Modified docker-compose.yml ===="
-          tail -40 docker-compose.yml
-          
-          echo "==== Validating docker-compose.yml ===="
-          docker compose config --quiet && echo "✓ docker-compose.yml is valid" || { echo "✗ docker-compose.yml is invalid"; exit 1; }
+          echo ""
+          echo "==== Validating combined compose configuration ===="
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml config --quiet && \
+            echo "✓ Compose configuration is valid" || \
+            { echo "✗ Compose configuration is invalid"; exit 1; }
       
       - name: Start Docker Compose services
         run: |
           echo "==== Starting Docker Compose services ===="
-          docker compose up -d wordpress-develop php mysql cli
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml up -d wordpress-develop php mysql cli
           
           echo "==== Waiting for services to initialize ===="
           sleep 15
           
           echo "==== Service status ===="
-          docker compose ps
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml ps
       
       - name: Wait for MySQL to be healthy
         run: |
@@ -189,15 +130,16 @@ jobs:
           max_attempts=30
           attempt=0
           
-          until docker compose ps mysql | grep -q "healthy" || [ $attempt -eq $max_attempts ]; do
+          until docker compose -f docker-compose.yml -f docker-compose.cypress.yml ps mysql | grep -q "healthy" || [ $attempt -eq $max_attempts ]; do
             echo "Attempt $((attempt+1))/$max_attempts: Waiting for MySQL..."
+            docker compose -f docker-compose.yml -f docker-compose.cypress.yml ps mysql
             sleep 3
             attempt=$((attempt+1))
           done
           
           if [ $attempt -eq $max_attempts ]; then
             echo "ERROR: MySQL did not become healthy"
-            docker compose logs mysql
+            docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs mysql
             exit 1
           fi
           
@@ -218,9 +160,9 @@ jobs:
           if [ $attempt -eq $max_attempts ]; then
             echo "ERROR: WordPress is not accessible"
             echo "==== Nginx logs ===="
-            docker compose logs wordpress-develop
+            docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs wordpress-develop
             echo "==== PHP logs ===="
-            docker compose logs php
+            docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs php
             exit 1
           fi
           
@@ -229,30 +171,37 @@ jobs:
       - name: Install WordPress
         run: |
           echo "==== Installing WordPress via WP-CLI ===="
-          docker compose run --rm cli wp core install \
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp core install \
             --url="http://localhost:8889" \
             --title="WordPress Develop" \
             --admin_user="admin" \
             --admin_password="password" \
             --admin_email="admin@example.com" \
-            --skip-email
+            --skip-email \
+            --path="/var/www/src"
           
           echo "==== Verifying WordPress installation ===="
-          docker compose run --rm cli wp core version
-          docker compose run --rm cli wp user list
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp core version --path="/var/www/src"
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp user list --path="/var/www/src"
       
       - name: Configure WordPress for testing
         run: |
           echo "==== Configuring WordPress ===="
           
           # Set permalink structure
-          docker compose run --rm cli wp rewrite structure '/%postname%/' || true
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp rewrite structure '/%postname%/' --path="/var/www/src" || true
           
           # Flush rewrite rules
-          docker compose run --rm cli wp rewrite flush --hard || true
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp rewrite flush --hard --path="/var/www/src" || true
           
           # Set timezone
-          docker compose run --rm cli wp option update timezone_string 'UTC' || true
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp option update timezone_string 'UTC' --path="/var/www/src" || true
           
           echo "✓ WordPress configured for testing"
       
@@ -276,22 +225,25 @@ jobs:
             echo "✓ WordPress is working correctly"
           else
             echo "✗ WordPress login page returned HTTP $login_response"
-            docker compose logs wordpress-develop
-            docker compose logs php
+            docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs wordpress-develop
+            docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs php
             exit 1
           fi
       
       - name: Show WordPress info
         run: |
           echo "==== WordPress Information ===="
-          docker compose run --rm cli wp core check-update || true
-          docker compose run --rm cli wp plugin list --status=active || true
-          docker compose run --rm cli wp theme list --status=active || true
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp core check-update --path="/var/www/src" || true
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp plugin list --status=active --path="/var/www/src" || true
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml run --rm cli \
+            wp theme list --status=active --path="/var/www/src" || true
       
       - name: Run Cypress tests
         run: |
           echo "==== Running Cypress tests ===="
-          docker compose up cypress --abort-on-container-exit --exit-code-from cypress
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml up cypress --abort-on-container-exit --exit-code-from cypress
         continue-on-error: true
         id: cypress-run
       
@@ -299,14 +251,14 @@ jobs:
         if: always()
         run: |
           echo "==== Cypress logs ===="
-          docker compose logs cypress 2>&1 || echo "No Cypress logs available"
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs cypress 2>&1 || echo "No Cypress logs available"
       
       - name: Check Cypress exit code
         if: always()
         id: cypress-result
         run: |
           # Get the exit code from the Cypress container
-          container_id=$(docker compose ps -q cypress 2>/dev/null)
+          container_id=$(docker compose -f docker-compose.yml -f docker-compose.cypress.yml ps -q cypress 2>/dev/null)
           if [ -n "$container_id" ]; then
             exit_code=$(docker inspect $container_id --format='{{.State.ExitCode}}')
           else
@@ -315,16 +267,15 @@ jobs:
           echo "Cypress exit code: $exit_code"
           echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
       
-      - name: Copy test artifacts from container
+      - name: Check test artifacts
         if: always()
         run: |
-          echo "==== Copying test artifacts ===="
+          echo "==== Checking test artifacts ===="
           
-          # Check if artifacts exist in mounted volume
-          echo "Local screenshots directory:"
+          echo "Screenshots directory:"
           ls -la tests/cypress/screenshots/ 2>/dev/null || echo "No screenshots directory"
           
-          echo "Local videos directory:"
+          echo "Videos directory:"
           ls -la tests/cypress/videos/ 2>/dev/null || echo "No videos directory"
       
       - name: Upload Cypress screenshots
@@ -370,32 +321,24 @@ jobs:
         if: failure()
         run: |
           echo "==== WordPress (Nginx) logs ===="
-          docker compose logs --tail=200 wordpress-develop
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs --tail=200 wordpress-develop
           
           echo "==== PHP logs ===="
-          docker compose logs --tail=200 php
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs --tail=200 php
           
           echo "==== MySQL logs ===="
-          docker compose logs --tail=100 mysql
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs --tail=100 mysql
           
           echo "==== Cypress logs ===="
-          docker compose logs cypress
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml logs cypress
       
       - name: Cleanup Docker environment
         if: always()
         run: |
           echo "==== Stopping and removing containers ===="
-          docker compose down -v --remove-orphans
+          docker compose -f docker-compose.yml -f docker-compose.cypress.yml down -v --remove-orphans
           
           echo "==== Docker cleanup complete ===="
-      
-      - name: Restore original docker-compose.yml
-        if: always()
-        run: |
-          if [ -f docker-compose.yml.backup ]; then
-            mv docker-compose.yml.backup docker-compose.yml
-            echo "✓ Restored original docker-compose.yml"
-          fi
       
       - name: Fail job if Cypress tests failed
         if: always() && steps.cypress-result.outputs.exit_code != '0'
