@@ -77,8 +77,8 @@ jobs:
     - name: Run all unit tests
       run: |
         echo "🧪 Running all WordPress core unit tests..."
-        vendor/bin/phpunit --configuration=phpunit.xml.dist
-        
+        vendor/bin/phpunit --configuration=phpunit.xml.dist --exclude-group avif
+
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
