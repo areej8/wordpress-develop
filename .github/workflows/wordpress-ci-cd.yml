@@ -77,8 +77,8 @@ jobs:
     - name: Run all unit tests
       run: |
         echo "🧪 Running all WordPress core unit tests..."
-        vendor/bin/phpunit --configuration=phpunit.xml.dist --exclude-group avif
-
+        vendor/bin/phpunit --configuration=phpunit.xml.dist
+        
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
@@ -123,8 +123,6 @@ jobs:
         ports:
           # PORT 8889 matches your local development
           - 8889:80
-        depends_on:
-          - mysql
         options: >-
           --health-cmd "curl -f http://localhost:80 || exit 1"
           --health-interval 10s
