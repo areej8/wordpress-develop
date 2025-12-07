@@ -1,46 +1,126 @@
-# .github/workflows/wordpress-minimal.yml
-name: WordPress Core Minimal CI
+# .github/workflows/ci-cd.yml
+name: WordPress Core CI/CD
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [trunk, main, develop]
+  pull_request:
+    branches: [trunk, main]
+  workflow_dispatch:
+
+env:
+  LOCAL_PHP: '8.2'
 
 jobs:
-  test:
+  # STAGE 1: Build & Setup
+  setup:
+    name: Setup Environment
     runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.LOCAL_PHP }}
+        extensions: mysqli, pdo_mysql, mbstring, xml, curl, gd
+        tools: composer
+        
+    - name: Install dependencies
+      run: |
+        composer install --no-progress --no-suggest
+        echo "✅ Dependencies installed"
+        
+    - name: Verify setup
+      run: |
+        echo "📋 Environment check:"
+        php --version
+        composer --version
+        ls -la tests/phpunit/tests/ | head -5
+        
+  # STAGE 2: Unit Tests (like your local command)
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: setup
     
     services:
       mysql:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: wordpress_test
+          MYSQL_DATABASE: wordpress_unit_test
         ports:
           - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: 🐘 Setup PHP
+    - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
-        extensions: mysqli, pdo_mysql, mbstring, xml
-        tools: composer, phpunit
+        php-version: ${{ env.LOCAL_PHP }}
+        extensions: mysqli, pdo_mysql
+        tools: composer
+        
+    - name: Install dependencies
+      run: composer install --no-progress
+      
+    - name: Setup database
+      run: |
+        mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_unit_test;"
+        
+    - name: Run tests with coverage (like your local command)
+      run: |
+        echo "Running tests with coverage..."
+        vendor/bin/phpunit \
+          --configuration=tests/phpunit/phpunit.xml.dist \
+          --coverage-html=coverage \
+          --coverage-clover=coverage.xml
+        
+    - name: Run specific test group (formatting)
+      run: |
+        echo "Running formatting tests..."
+        vendor/bin/phpunit \
+          --configuration=tests/phpunit/phpunit.xml.dist \
+          --group=formatting \
+          --coverage-text
+        
+    - name: Upload coverage
+      uses: actions/upload-artifact@v4
+      with:
+        name: unit-test-coverage
+        path: |
+          coverage/
+          coverage.xml
+        
+  # STAGE 3: Integration Tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
     
-    - name: 📦 Install dependencies
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run all tests
       run: |
-        composer install --no-progress
+        echo "Running all tests..."
+        vendor/bin/phpunit --configuration=tests/phpunit/phpunit.xml.dist
         
-    - name: 🗄️ Setup database
+    - name: Generate test report
       run: |
-        mysql -h127.0.0.1 -P3306 -uroot -ppassword -e "CREATE DATABASE IF NOT EXISTS wordpress_test;"
+        echo "Generating test report..."
+        vendor/bin/phpunit \
+          --configuration=tests/phpunit/phpunit.xml.dist \
+          --log-junit=junit.xml \
+          --coverage-clover=integration-coverage.xml
         
-    - name: 🧪 Run a single test
-      run: |
-        phpunit --configuration=tests/phpunit/phpunit.xml.dist \
-          tests/phpunit/tests/general/wpGetScriptLoaderTag.php \
-          --verbose
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: |
+          junit.xml
+          integration-coverage.xml
