@@ -48,38 +48,34 @@ jobs:
 
       - name: Run PHPUnit (excluding problematic AVIF/Imagick tests)
         run: |
-          # PHPUnit 9.6 doesn't support negative filters well
-          # Best approach: Modify the test suite configuration to exclude specific test files
-          
           # Create custom PHPUnit config excluding problematic test files
-          cat > phpunit-ci.xml << 'PHPUNITEOF'
-<?xml version="1.0"?>
-<phpunit
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
-    bootstrap="tests/phpunit/includes/bootstrap.php"
-    convertDeprecationsToExceptions="true"
-    colors="true"
->
-    <testsuites>
-        <testsuite name="default">
-            <directory suffix=".php">tests/phpunit/tests</directory>
-            <exclude>tests/phpunit/tests/image/editorImagick.php</exclude>
-            <exclude>tests/phpunit/tests/image/resize.php</exclude>
-            <exclude>tests/phpunit/tests/media.php</exclude>
-        </testsuite>
-    </testsuites>
-    <groups>
-        <exclude>
-            <group>ajax</group>
-            <group>ms-files</group>
-            <group>external-http</group>
-        </exclude>
-    </groups>
-</phpunit>
-PHPUNITEOF
+          cat > phpunit-ci.xml << 'EOF'
+          <?xml version="1.0"?>
+          <phpunit
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
+              bootstrap="tests/phpunit/includes/bootstrap.php"
+              convertDeprecationsToExceptions="true"
+              colors="true"
+          >
+              <testsuites>
+                  <testsuite name="default">
+                      <directory suffix=".php">tests/phpunit/tests</directory>
+                      <exclude>tests/phpunit/tests/image/editorImagick.php</exclude>
+                      <exclude>tests/phpunit/tests/image/resize.php</exclude>
+                      <exclude>tests/phpunit/tests/media.php</exclude>
+                  </testsuite>
+              </testsuites>
+              <groups>
+                  <exclude>
+                      <group>ajax</group>
+                      <group>ms-files</group>
+                      <group>external-http</group>
+                  </exclude>
+              </groups>
+          </phpunit>
+          EOF
           
-          # Run tests with custom configuration
           vendor/bin/phpunit --configuration=phpunit-ci.xml
 
   cypress-tests:
