@@ -140,14 +140,15 @@ jobs:
       
       - name: Install JWT Auth plugin
         run: |
-          echo "==== Installing JWT plugin ===="
+          echo "==== Fixing wp-content permissions ===="
+          docker compose run --rm cli bash -c "mkdir -p /var/www/src/wp-content/upgrade && chmod -R 777 /var/www/src/wp-content"
           
+          echo "==== Installing JWT plugin ===="
           docker compose run --rm cli \
             wp plugin install jwt-authentication-for-wp-rest-api --activate \
             --path="/var/www/src"
 
           echo "==== Adding JWT required constants to wp-config.php ===="
-          
           docker compose run --rm cli \
             wp config set JWT_AUTH_SECRET_KEY "your-super-secret-key" \
             --type=constant --path="/var/www/src"
@@ -155,7 +156,7 @@ jobs:
           docker compose run --rm cli \
             wp config set JWT_AUTH_CORS_ENABLE true \
             --type=constant --raw --path="/var/www/src"
-          
+
           echo "==== JWT plugin installed and configured ===="
 
       
