@@ -8,6 +8,7 @@ import os
 BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8889/wp-json/wp/v2')
 WP_BASE_URL = os.environ.get('WP_BASE_URL', 'http://localhost:8889')
 API_ROOT = os.environ.get('API_ROOT', 'http://localhost:8889/wp-json/')
+AUTH_URL = f"{API_ROOT}jwt-auth/v1/token"
 
 # Authentication credentials
 USERNAME = os.environ.get('WP_USERNAME', 'aneeqawali')

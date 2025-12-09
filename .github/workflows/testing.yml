@@ -138,6 +138,27 @@ jobs:
             wp user list \
             --path="/var/www/src"
       
+      - name: Install JWT Auth plugin
+        run: |
+          echo "==== Installing JWT plugin ===="
+          
+          docker compose run --rm cli \
+            wp plugin install jwt-authentication-for-wp-rest-api --activate \
+            --path="/var/www/src"
+
+          echo "==== Adding JWT required constants to wp-config.php ===="
+          
+          docker compose run --rm cli \
+            wp config set JWT_AUTH_SECRET_KEY "your-super-secret-key" \
+            --type=constant --path="/var/www/src"
+
+          docker compose run --rm cli \
+            wp config set JWT_AUTH_CORS_ENABLE true \
+            --type=constant --raw --path="/var/www/src"
+          
+          echo "==== JWT plugin installed and configured ===="
+
+      
       - name: Create sample WordPress data
         run: |
           echo "==== Creating sample posts ===="
