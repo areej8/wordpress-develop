@@ -9,7 +9,7 @@ on:
 jobs:
   pytest-api-tests:
     runs-on: ubuntu-latest
-
+    
     services:
       mysql:
         image: mysql:8.0
@@ -19,61 +19,62 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -ppassword"
+          --health-cmd="mysqladmin ping -h localhost -ppassword"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
-
+      
       wordpress:
         image: wordpress:latest
         env:
-          WORDPRESS_DB_HOST: mysql
+          WORDPRESS_DB_HOST: mysql:3306
           WORDPRESS_DB_USER: root
           WORDPRESS_DB_PASSWORD: password
           WORDPRESS_DB_NAME: wordpress_test
         ports:
           - 8000:80
         options: >-
-          --health-cmd="curl -f http://localhost/wp-admin/install.php || exit 0"
+          --health-cmd="curl -f http://localhost || exit 1"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
-
+    
     steps:
-      - uses: actions/checkout@v4
-
-      # Python setup
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-
-      # Install pytest + dependencies
+      
       - name: Install test dependencies
-        run: pip install pytest requests jsonschema
-
-      # Wait for WordPress to respond
-      - name: Wait for WordPress
+        run: |
+          pip install pytest requests jsonschema
+      
+      - name: Wait for WordPress to be ready
         run: |
           echo "Waiting for WordPress to be ready..."
-          for i in {1..60}; do
-            curl -s http://localhost:8000 > /dev/null && break
-            echo -n "."
+          max_attempts=60
+          attempt=0
+          
+          until curl -f -s http://localhost:8000 > /dev/null 2>&1 || [ $attempt -eq $max_attempts ]; do
+            echo "Attempt $((attempt+1))/$max_attempts: Waiting for WordPress..."
             sleep 5
+            attempt=$((attempt+1))
           done
-          echo "WordPress is ready."
-
-      # Install WP-CLI (official method)
-      - name: Install WP-CLI
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "ERROR: WordPress did not become ready"
+            exit 1
+          fi
+          
+          echo "✓ WordPress is ready"
+      
+      - name: Install WordPress via container
         run: |
-          curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-          chmod +x wp-cli.phar
-          sudo mv wp-cli.phar /usr/local/bin/wp
-
-      # Perform WordPress installation
-      - name: Install WordPress using WP-CLI
-        run: |
-          wp core install \
+          echo "==== Installing WordPress ===="
+          docker exec ${{ job.services.wordpress.id }} wp core install \
             --url="http://localhost:8000" \
             --title="Test Site" \
             --admin_user="admin" \
@@ -81,21 +82,67 @@ jobs:
             --admin_email="admin@example.com" \
             --skip-email \
             --allow-root
-
-      # Add sample data needed for API tests
-      - name: Create sample WP data
+          
+          echo "==== Verifying installation ===="
+          docker exec ${{ job.services.wordpress.id }} wp core version --allow-root
+      
+      - name: Create sample WordPress data
         run: |
-          wp post create --post_title="Hello World" --post_status=publish --allow-root
-          wp post create --post_title="Second Post" --post_status=publish --allow-root
-
-          wp user create testuser test@example.com \
-            --role=subscriber --user_pass=password --allow-root
-
-          wp term create category SampleCategory --allow-root
-
-      # Run pytest tests
+          echo "==== Creating sample posts ===="
+          docker exec ${{ job.services.wordpress.id }} wp post create \
+            --post_title="Hello World" \
+            --post_status=publish \
+            --allow-root
+          
+          docker exec ${{ job.services.wordpress.id }} wp post create \
+            --post_title="Second Post" \
+            --post_status=publish \
+            --allow-root
+          
+          echo "==== Creating test user ===="
+          docker exec ${{ job.services.wordpress.id }} wp user create \
+            testuser test@example.com \
+            --role=subscriber \
+            --user_pass=password \
+            --allow-root
+          
+          echo "==== Creating category ===="
+          docker exec ${{ job.services.wordpress.id }} wp term create \
+            category SampleCategory \
+            --allow-root
+          
+          echo "==== Listing created content ===="
+          docker exec ${{ job.services.wordpress.id }} wp post list --allow-root
+          docker exec ${{ job.services.wordpress.id }} wp user list --allow-root
+      
+      - name: Verify WordPress API is accessible
+        run: |
+          echo "==== Testing WordPress REST API ===="
+          
+          # Test root endpoint
+          response=$(curl -s http://localhost:8000/wp-json/)
+          echo "API Root Response:"
+          echo "$response" | head -20
+          
+          # Test posts endpoint
+          posts_response=$(curl -s http://localhost:8000/wp-json/wp/v2/posts)
+          echo ""
+          echo "Posts endpoint:"
+          echo "$posts_response" | head -20
+      
       - name: Run API Tests
-        run: pytest tests/api_test/
+        run: |
+          echo "==== Running pytest API tests ===="
+          pytest tests/api_test/ -v
         env:
           API_BASE_URL: http://localhost:8000/wp-json/
-
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: |
+            tests/api_test/
+            pytest.log
+          if-no-files-found: ignore
