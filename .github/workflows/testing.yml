@@ -71,7 +71,17 @@ jobs:
           
           echo "✓ WordPress is ready"
       
-      - name: Install WordPress via container
+      - name: Install WP-CLI in WordPress container
+        run: |
+          echo "==== Installing WP-CLI in WordPress container ===="
+          docker exec --user root ${{ job.services.wordpress.id }} bash -c "
+            curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+            chmod +x wp-cli.phar
+            mv wp-cli.phar /usr/local/bin/wp
+            wp --version --allow-root
+          "
+      
+      - name: Install WordPress
         run: |
           echo "==== Installing WordPress ===="
           docker exec ${{ job.services.wordpress.id }} wp core install \
@@ -85,17 +95,20 @@ jobs:
           
           echo "==== Verifying installation ===="
           docker exec ${{ job.services.wordpress.id }} wp core version --allow-root
+          docker exec ${{ job.services.wordpress.id }} wp user list --allow-root
       
       - name: Create sample WordPress data
         run: |
           echo "==== Creating sample posts ===="
           docker exec ${{ job.services.wordpress.id }} wp post create \
             --post_title="Hello World" \
+            --post_content="This is the first test post." \
             --post_status=publish \
             --allow-root
           
           docker exec ${{ job.services.wordpress.id }} wp post create \
             --post_title="Second Post" \
+            --post_content="This is the second test post." \
             --post_status=publish \
             --allow-root
           
@@ -114,6 +127,7 @@ jobs:
           echo "==== Listing created content ===="
           docker exec ${{ job.services.wordpress.id }} wp post list --allow-root
           docker exec ${{ job.services.wordpress.id }} wp user list --allow-root
+          docker exec ${{ job.services.wordpress.id }} wp term list category --allow-root
       
       - name: Verify WordPress API is accessible
         run: |
