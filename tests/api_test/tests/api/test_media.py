@@ -36,7 +36,7 @@ def uploaded_media_id(base_url, auth_header):
     yield media_id
     
     # Cleanup: Delete the media item after all tests are done
-    requests.delete(f"{base_url}/media/{media_id}?force=true", headers=auth_header)
+    requests.delete(f"{base_url}/media/{media_id}?force=true", auth=auth_header)
 
 
 def test_get_media_items(base_url):
@@ -52,7 +52,7 @@ def test_update_media_item(base_url, auth_header, uploaded_media_id):
     new_title = "Updated Pytest Media Title"
     
     data = {"title": new_title}
-    response = requests.post(f"{base_url}/media/{media_id}", json=data, headers=auth_header)
+    response = requests.post(f"{base_url}/media/{media_id}", json=data, auth=auth_header)
     
     assert response.status_code in [200, 201]
     updated_json = response.json()

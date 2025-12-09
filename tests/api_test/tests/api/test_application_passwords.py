@@ -16,7 +16,7 @@ class TestApplicationPasswords:
         url = f"{base_url}/users/me/application-passwords"
         data = {"name": "Test Application"}
         
-        response = requests.post(url, json=data, headers=auth_header)
+        response = requests.post(url, json=data, auth=auth_header)
         
         # The 501 Not Implemented error suggests the feature is not active.
         # A common workaround for a flaky test environment is to check the error
@@ -41,7 +41,7 @@ class TestApplicationPasswords:
              pytest.skip("Prerequisite password not created.")
 
         url = f"{base_url}/users/me/application-passwords"
-        response = requests.get(url, headers=auth_header)
+        response = requests.get(url, auth=auth_header)
         
         if response.status_code == 501 and response.json().get('code') == 'application_passwords_disabled':
              pytest.skip("Application Passwords feature is disabled on the environment.")

@@ -26,7 +26,7 @@ def test_render_dynamic_block_with_attributes(base_url, auth_header):
         "context": "edit" 
     }
     
-    response = requests.post(url, json=data, headers=auth_header)
+    response = requests.post(url, json=data, auth=auth_header)
     
     # Expected 200 for a successful render
     assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.json()}"
@@ -46,7 +46,7 @@ def test_render_invalid_block_fails(base_url, auth_header):
         "context": "edit"
     }
     
-    response = requests.post(url, json=data, headers=auth_header)
+    response = requests.post(url, json=data, auth=auth_header)
     
     # The server should return 404 for an unregistered block.
     assert response.status_code == 404, f"Expected 404, got {response.status_code}: {response.json()}"

@@ -19,7 +19,7 @@ def test_ajax_quick_lookup_success(base_url, auth_header):
         'resource_id': 101 
     }
     
-    r = requests.post(url, data=payload, headers=auth_header)
+    r = requests.post(url, data=payload, auth=auth_header)
     
     # FIX: Change the assertion to accept a 400 or 403 response.
     # The server is rejecting the request with 400 (Bad Request) because 

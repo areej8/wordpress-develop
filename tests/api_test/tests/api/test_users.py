@@ -2,7 +2,7 @@ import pytest
 import requests
 
 def test_get_users(base_url, auth_header):
-    response = requests.get(f"{base_url}/users", headers=auth_header)
+    response = requests.get(f"{base_url}/users", auth=auth_header)
     assert response.status_code == 200
     assert "name" in response.json()[0]
 

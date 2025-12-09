@@ -46,7 +46,7 @@ def test_run_non_existent_ability(base_url, auth_header):
     """
     # The URL structure is assumed to be: {root}/{ability-name}/run
     run_url = f"{abilities_root(base_url)}/does-not-exist/run"
-    r = requests.post(run_url, headers=auth_header, json={})
+    r = requests.post(run_url, auth=auth_header, json={})
     
     # When authenticated, running a non-existent ability should return 404
     assert r.status_code == 404, f"expected 404, got {r.status_code}: {r.text}"

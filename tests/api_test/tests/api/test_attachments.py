@@ -8,7 +8,7 @@ import os
 
 def test_list_attachments(base_url, auth_header):
     """Test listing attachments (media) library content."""
-    response = requests.get(f"{base_url}/media", headers=auth_header)
+    response = requests.get(f"{base_url}/media", auth=auth_header)
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
@@ -42,7 +42,7 @@ def test_upload_attachment_metadata(base_url, auth_header):
         media_id = response.json()["id"]
         
         # Cleanup the uploaded file
-        requests.delete(f"{base_url}/media/{media_id}", params={"force": True}, headers=auth_header)
+        requests.delete(f"{base_url}/media/{media_id}", params={"force": True}, auth=auth_header)
         
     finally:
         # Cleanup the local dummy file

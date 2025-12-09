@@ -18,7 +18,7 @@ except ImportError:
 def test_get_posts_schema_validation(base_url, auth_header): # <-- FIX 1: Added auth_header
     """Validates the structure of a single post response against the schema."""
     # FIX 1: Use context=edit to guarantee 'raw' fields are returned for schema validation
-    response = requests.get(f"{base_url}/posts?per_page=1&context=edit", headers=auth_header)
+    response = requests.get(f"{base_url}/posts?per_page=1&context=edit", auth=auth_header)
     
     assert response.status_code == 200
     posts = response.json()

@@ -27,7 +27,7 @@ def test_invalid_data_post_creation(base_url, auth_header):
         "content": "Post with no title",
         "status": "publish"
     }
-    response = requests.post(f"{base_url}/posts", json=data, headers=auth_header)
+    response = requests.post(f"{base_url}/posts", json=data, auth=auth_header)
     
     # FIX: Change expected status code from 400 to 201
     assert response.status_code == 201 
@@ -39,7 +39,7 @@ def test_invalid_data_post_creation(base_url, auth_header):
     assert json_data["title"]["raw"] == "" or "no title" in json_data["title"]["rendered"].lower()
     
     # Cleanup: Delete the post that was successfully created
-    requests.delete(f"{base_url}/posts/{json_data['id']}?force=true", headers=auth_header)
+    requests.delete(f"{base_url}/posts/{json_data['id']}?force=true", auth=auth_header)
 
 
 def test_post_status_filtering(base_url, auth_header):
@@ -49,18 +49,18 @@ def test_post_status_filtering(base_url, auth_header):
         "title": f"Draft Post {int(time.time())}",
         "status": "draft"
     }
-    create_response = requests.post(f"{base_url}/posts", json=data, headers=auth_header)
+    create_response = requests.post(f"{base_url}/posts", json=data, auth=auth_header)
     draft_id = create_response.json()["id"]
 
     # 2. Query for drafts
-    filter_response = requests.get(f"{base_url}/posts?status=draft", headers=auth_header)
+    filter_response = requests.get(f"{base_url}/posts?status=draft", auth=auth_header)
     
     # 3. Verify the draft is in the filtered list
     draft_is_present = any(post["id"] == draft_id for post in filter_response.json())
     assert draft_is_present is True
     
     # Cleanup: Delete the draft
-    requests.delete(f"{base_url}/posts/{draft_id}?force=true", headers=auth_header)
+    requests.delete(f"{base_url}/posts/{draft_id}?force=true", auth=auth_header)
 
 
 def test_get_post_with_embedding(base_url, auth_header):
@@ -68,14 +68,14 @@ def test_get_post_with_embedding(base_url, auth_header):
     # Note: Requires a post with a featured image and/or an author other than 'admin' for a full test.
     
     # Fetch a single post
-    response = requests.get(f"{base_url}/posts?per_page=1", headers=auth_header)
+    response = requests.get(f"{base_url}/posts?per_page=1", auth=auth_header)
     if not response.json():
         pytest.skip("No posts available to test embedding.")
     
     post_id = response.json()[0]["id"]
     
     # Request the post with embedding enabled
-    embed_response = requests.get(f"{base_url}/posts/{post_id}?_embed=true", headers=auth_header)
+    embed_response = requests.get(f"{base_url}/posts/{post_id}?_embed=true", auth=auth_header)
     
     assert embed_response.status_code == 200
     
