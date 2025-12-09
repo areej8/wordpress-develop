@@ -213,12 +213,71 @@ jobs:
             echo "$posts_response" | head -30
           fi
       
+      - name: Check test configuration
+        run: |
+          echo "==== Checking test configuration files ===="
+          
+          # Find conftest.py or config files
+          find tests/api_test -name "conftest.py" -o -name "config.py" -o -name "__init__.py" | while read file; do
+            echo "Found: $file"
+            cat "$file"
+          done
+          
+          # Check if there's a pytest.ini or setup.cfg
+          if [ -f tests/api_test/pytest.ini ]; then
+            echo "Found pytest.ini:"
+            cat tests/api_test/pytest.ini
+          fi
+          
+          if [ -f tests/api_test/setup.cfg ]; then
+            echo "Found setup.cfg:"
+            cat tests/api_test/setup.cfg
+          fi
+      
+      - name: Update test configuration for correct port
+        run: |
+          echo "==== Updating test configuration ===="
+          
+          # Find and update any hardcoded localhost:8000 references
+          find tests/api_test -type f -name "*.py" -exec grep -l "localhost:8000" {} \; | while read file; do
+            echo "Updating $file"
+            sed -i 's|localhost:8000|localhost:8889|g' "$file"
+            sed -i 's|http://localhost/wp-json|http://localhost:8889/wp-json|g' "$file"
+          done
+          
+          # Update conftest.py if it exists
+          if [ -f tests/api_test/conftest.py ]; then
+            echo "Updating conftest.py"
+            sed -i 's|localhost:8000|localhost:8889|g' tests/api_test/conftest.py
+          fi
+          
+          # Create or update a config file to use environment variable
+          cat > tests/api_test/test_config.py << 'EOF'
+          import os
+          
+          # Get base URL from environment variable or use default
+          API_BASE_URL = os.environ.get('API_BASE_URL', 'http://localhost:8889/wp-json/')
+          WP_BASE_URL = os.environ.get('WP_BASE_URL', 'http://localhost:8889')
+          
+          # Authentication
+          USERNAME = os.environ.get('WP_USERNAME', 'admin')
+          PASSWORD = os.environ.get('WP_PASSWORD', 'password')
+          
+          print(f"Using API_BASE_URL: {API_BASE_URL}")
+          print(f"Using WP_BASE_URL: {WP_BASE_URL}")
+          EOF
+          
+          echo "✓ Test configuration updated"
+      
       - name: Run API Tests
         run: |
           echo "==== Running pytest API tests ===="
-          pytest tests/api_test/ -v --tb=short
+          pytest tests/api_test/ -v --tb=short -x
         env:
           API_BASE_URL: http://localhost:8889/wp-json/
+          WP_BASE_URL: http://localhost:8889
+          WP_USERNAME: admin
+          WP_PASSWORD: password
       
       - name: Show logs on failure
         if: failure()

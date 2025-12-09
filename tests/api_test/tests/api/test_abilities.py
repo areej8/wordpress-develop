@@ -27,7 +27,7 @@ def abilities_root(base_url: str) -> str:
 def test_run_ability_requires_authentication(base_url):
     """
     Attempts to execute an ability without authentication and expects failure.
-    URL hit: http://localhost:8000/wp-json/wp-abilities/v1/any-ability-name/run
+    URL hit: http://localhost:8889/wp-json/wp-abilities/v1/any-ability-name/run
     """
     # The URL structure is assumed to be: {root}/{ability-name}/run
     run_url = f"{abilities_root(base_url)}/any-ability-name/run"
@@ -42,7 +42,7 @@ def test_run_ability_requires_authentication(base_url):
 def test_run_non_existent_ability(base_url, auth_header):
     """
     Attempts to execute an ability that doesn't exist while authenticated.
-    URL hit: http://localhost:8000/wp-json/wp-abilities/v1/does-not-exist/run
+    URL hit: http://localhost:8889/wp-json/wp-abilities/v1/does-not-exist/run
     """
     # The URL structure is assumed to be: {root}/{ability-name}/run
     run_url = f"{abilities_root(base_url)}/does-not-exist/run"
