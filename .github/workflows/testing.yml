@@ -10,35 +10,6 @@ jobs:
   pytest-api-tests:
     runs-on: ubuntu-latest
     
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: wordpress_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -ppassword"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-      
-      wordpress:
-        image: wordpress:latest
-        env:
-          WORDPRESS_DB_HOST: mysql:3306
-          WORDPRESS_DB_USER: root
-          WORDPRESS_DB_PASSWORD: password
-          WORDPRESS_DB_NAME: wordpress_test
-        ports:
-          - 8000:80
-        options: >-
-          --health-cmd="curl -f http://localhost || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -52,39 +23,119 @@ jobs:
         run: |
           pip install pytest requests jsonschema
       
+      - name: Create Docker Compose file
+        run: |
+          cat > docker-compose.test.yml << 'EOF'
+          services:
+            mysql:
+              image: mysql:8.0
+              environment:
+                MYSQL_ROOT_PASSWORD: password
+                MYSQL_DATABASE: wordpress_test
+              ports:
+                - "3306:3306"
+              healthcheck:
+                test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+                interval: 5s
+                timeout: 5s
+                retries: 10
+              networks:
+                - wordpress-network
+            
+            wordpress:
+              image: wordpress:latest
+              depends_on:
+                mysql:
+                  condition: service_healthy
+              environment:
+                WORDPRESS_DB_HOST: mysql:3306
+                WORDPRESS_DB_USER: root
+                WORDPRESS_DB_PASSWORD: password
+                WORDPRESS_DB_NAME: wordpress_test
+                WORDPRESS_DEBUG: 1
+              ports:
+                - "8000:80"
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost"]
+                interval: 5s
+                timeout: 5s
+                retries: 10
+              networks:
+                - wordpress-network
+              # Enable mod_rewrite and configure .htaccess
+              entrypoint: >
+                bash -c "
+                a2enmod rewrite &&
+                chown -R www-data:www-data /var/www/html &&
+                docker-entrypoint.sh apache2-foreground
+                "
+            
+            wpcli:
+              image: wordpress:cli
+              depends_on:
+                wordpress:
+                  condition: service_healthy
+              environment:
+                WORDPRESS_DB_HOST: mysql:3306
+                WORDPRESS_DB_USER: root
+                WORDPRESS_DB_PASSWORD: password
+                WORDPRESS_DB_NAME: wordpress_test
+              volumes:
+                - wordpress_data:/var/www/html
+              networks:
+                - wordpress-network
+              command: tail -f /dev/null
+          
+          networks:
+            wordpress-network:
+              driver: bridge
+          
+          volumes:
+            wordpress_data:
+          EOF
+          
+          cat docker-compose.test.yml
+      
+      - name: Start Docker Compose services
+        run: |
+          echo "==== Starting services ===="
+          docker compose -f docker-compose.test.yml up -d
+          
+          echo "==== Waiting for services ===="
+          sleep 20
+          
+          echo "==== Service status ===="
+          docker compose -f docker-compose.test.yml ps
+      
       - name: Wait for WordPress to be ready
         run: |
-          echo "Waiting for WordPress to be ready..."
+          echo "==== Waiting for WordPress ===="
           max_attempts=60
           attempt=0
           
           until curl -f -s http://localhost:8000 > /dev/null 2>&1 || [ $attempt -eq $max_attempts ]; do
-            echo "Attempt $((attempt+1))/$max_attempts: Waiting for WordPress..."
+            echo "Attempt $((attempt+1))/$max_attempts: Waiting..."
             sleep 5
             attempt=$((attempt+1))
           done
           
           if [ $attempt -eq $max_attempts ]; then
-            echo "ERROR: WordPress did not become ready"
+            echo "ERROR: WordPress not ready"
+            docker compose -f docker-compose.test.yml logs wordpress
             exit 1
           fi
           
           echo "✓ WordPress is ready"
-      
-      - name: Install WP-CLI in WordPress container
-        run: |
-          echo "==== Installing WP-CLI in WordPress container ===="
-          docker exec --user root ${{ job.services.wordpress.id }} bash -c "
-            curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-            chmod +x wp-cli.phar
-            mv wp-cli.phar /usr/local/bin/wp
-            wp --version --allow-root
-          "
+          
+          # Give it extra time to fully initialize
+          echo "Waiting additional 10 seconds for complete initialization..."
+          sleep 10
       
       - name: Install WordPress
         run: |
           echo "==== Installing WordPress ===="
-          docker exec ${{ job.services.wordpress.id }} wp core install \
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp core install \
             --url="http://localhost:8000" \
             --title="Test Site" \
             --admin_user="admin" \
@@ -93,70 +144,139 @@ jobs:
             --skip-email \
             --allow-root
           
+          echo "==== Configuring permalinks for REST API ===="
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp rewrite structure '/%postname%/' --allow-root
+          
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp rewrite flush --hard --allow-root
+          
           echo "==== Verifying installation ===="
-          docker exec ${{ job.services.wordpress.id }} wp core version --allow-root
-          docker exec ${{ job.services.wordpress.id }} wp user list --allow-root
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp core version --allow-root
+          
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp user list --allow-root
+          
+          echo "==== Checking rewrite rules ===="
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp rewrite list --allow-root
       
       - name: Create sample WordPress data
         run: |
           echo "==== Creating sample posts ===="
-          docker exec ${{ job.services.wordpress.id }} wp post create \
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp post create \
             --post_title="Hello World" \
             --post_content="This is the first test post." \
             --post_status=publish \
             --allow-root
           
-          docker exec ${{ job.services.wordpress.id }} wp post create \
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp post create \
             --post_title="Second Post" \
             --post_content="This is the second test post." \
             --post_status=publish \
             --allow-root
           
           echo "==== Creating test user ===="
-          docker exec ${{ job.services.wordpress.id }} wp user create \
-            testuser test@example.com \
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp user create testuser test@example.com \
             --role=subscriber \
             --user_pass=password \
             --allow-root
           
           echo "==== Creating category ===="
-          docker exec ${{ job.services.wordpress.id }} wp term create \
-            category SampleCategory \
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp term create category SampleCategory \
             --allow-root
           
-          echo "==== Listing created content ===="
-          docker exec ${{ job.services.wordpress.id }} wp post list --allow-root
-          docker exec ${{ job.services.wordpress.id }} wp user list --allow-root
-          docker exec ${{ job.services.wordpress.id }} wp term list category --allow-root
+          echo "==== Verifying created content ===="
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp post list --allow-root
+          
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp user list --allow-root
+          
+          docker compose -f docker-compose.test.yml exec -T wpcli \
+            wp term list category --allow-root
       
-      - name: Verify WordPress API is accessible
+      - name: Verify WordPress API
         run: |
           echo "==== Testing WordPress REST API ===="
           
-          # Test root endpoint
-          response=$(curl -s http://localhost:8000/wp-json/)
-          echo "API Root Response:"
-          echo "$response" | head -20
+          # Test root endpoint with proper headers
+          echo "Testing API root endpoint..."
+          response=$(curl -s -H "Accept: application/json" http://localhost:8000/wp-json/)
+          
+          if echo "$response" | grep -q '"name"'; then
+            echo "✓ API root endpoint is working"
+            echo "$response" | python3 -m json.tool | head -20
+          else
+            echo "✗ API root endpoint returned HTML instead of JSON"
+            echo "Response preview:"
+            echo "$response" | head -50
+            echo ""
+            echo "Checking if mod_rewrite is working..."
+            curl -I http://localhost:8000/wp-json/
+            exit 1
+          fi
           
           # Test posts endpoint
-          posts_response=$(curl -s http://localhost:8000/wp-json/wp/v2/posts)
           echo ""
-          echo "Posts endpoint:"
-          echo "$posts_response" | head -20
+          echo "Testing posts endpoint..."
+          posts_response=$(curl -s -H "Accept: application/json" http://localhost:8000/wp-json/wp/v2/posts)
+          
+          if echo "$posts_response" | grep -q '\['; then
+            echo "✓ Posts endpoint is working"
+            echo "$posts_response" | python3 -m json.tool | head -20
+          else
+            echo "✗ Posts endpoint failed"
+            echo "$posts_response" | head -30
+          fi
+          
+          # Test users endpoint
+          echo ""
+          echo "Testing users endpoint..."
+          users_response=$(curl -s -H "Accept: application/json" http://localhost:8000/wp-json/wp/v2/users)
+          
+          if echo "$users_response" | grep -q '\['; then
+            echo "✓ Users endpoint is working"
+          else
+            echo "⚠ Users endpoint may have issues"
+          fi
       
       - name: Run API Tests
         run: |
           echo "==== Running pytest API tests ===="
-          pytest tests/api_test/ -v
+          pytest tests/api_test/ -v --tb=short
         env:
           API_BASE_URL: http://localhost:8000/wp-json/
+      
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "==== WordPress logs ===="
+          docker compose -f docker-compose.test.yml logs wordpress
+          
+          echo "==== MySQL logs ===="
+          docker compose -f docker-compose.test.yml logs mysql
+          
+          echo "==== WP-CLI logs ===="
+          docker compose -f docker-compose.test.yml logs wpcli
       
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-results
+          name: pytest-results-${{ github.run_number }}
           path: |
             tests/api_test/
-            pytest.log
+            .pytest_cache/
           if-no-files-found: ignore
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "==== Cleaning up ===="
+          docker compose -f docker-compose.test.yml down -v
